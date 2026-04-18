@@ -1,0 +1,56 @@
+.container {
+  padding: 40rpx;
+}
+
+.user-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60rpx 0;
+  background: #fff;
+  border-radius: 16rpx;
+  margin-bottom: 30rpx;
+}
+
+.avatar {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  margin-bottom: 20rpx;
+}
+
+.nickname {
+  font-size: 32rpx;
+  font-weight: 500;
+}
+
+.login-tip {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 30rpx;
+}
+
+.login-btn {
+  background: #3cc51f;
+  color: #fff;
+}
+
+.menu-list {
+  background: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.menu-item {
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-text {
+  font-size: 28rpx;
+  color: #333;
+}

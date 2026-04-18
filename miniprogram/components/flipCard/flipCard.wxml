@@ -1,0 +1,6 @@
+<view class="flip-card" bindtap="flip">
+  <view class="card-inner {{isFlipped ? 'flipped' : ''}}">
+    <view class="card-face front">{{front}}</view>
+    <view class="card-face back">{{back}}</view>
+  </view>
+</view>

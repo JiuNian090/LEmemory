@@ -1,0 +1,48 @@
+<view class="container">
+  <view class="tabs">
+    <block wx:for="{{tabs}}" wx:key="index">
+      <view class="tab-item {{currentTab === index ? 'active' : ''}}" bindtap="switchTab" data-index="{{index}}">
+        {{item}}
+      </view>
+    </block>
+  </view>
+
+  <view class="tab-content">
+    <view wx:if="{{currentTab === 0}}" class="study-section">
+      <block wx:if="{{cards.length > 0}}">
+        <view class="card-container">
+          <view class="card">{{cards[currentCardIndex].front}}</view>
+        </view>
+        <view class="card-nav">
+          <button class="nav-btn" bindtap="prevCard" disabled="{{currentCardIndex === 0}}">上一张</button>
+          <text class="card-index">{{currentCardIndex + 1}}/{{cards.length}}</text>
+          <button class="nav-btn" bindtap="nextCard" disabled="{{currentCardIndex === cards.length - 1}}">下一张</button>
+        </view>
+      </block>
+      <view wx:else class="empty-tip">暂无卡牌，请先添加</view>
+    </view>
+
+    <view wx:if="{{currentTab === 1}}" class="catalog-section">
+      <view wx:for="{{cards}}" wx:key="cardId" class="catalog-item">
+        {{item.front}}
+      </view>
+      <view wx:if="{{cards.length === 0}}" class="empty-tip">暂无卡牌</view>
+    </view>
+
+    <view wx:if="{{currentTab === 2}}" class="cards-section">
+      <view class="add-btn" bindtap="addCard">+ 添加卡牌</view>
+      <view wx:for="{{cards}}" wx:key="cardId" class="card-item">
+        <view class="card-front">{{item.front}}</view>
+        <view class="card-back">{{item.back}}</view>
+      </view>
+      <view wx:if="{{cards.length === 0}}" class="empty-tip">暂无卡牌</view>
+    </view>
+
+    <view wx:if="{{currentTab === 3}}" class="favorites-section">
+      <view wx:for="{{favorites}}" wx:key="favoriteId" class="favorite-item">
+        {{item.cardId}}
+      </view>
+      <view wx:if="{{favorites.length === 0}}" class="empty-tip">暂无收藏</view>
+    </view>
+  </view>
+</view>

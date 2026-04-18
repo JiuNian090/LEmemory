@@ -1,0 +1,19 @@
+<view class="container">
+  <view class="header">
+    <text class="title">我的卡牌组</text>
+    <button class="add-btn" bindtap="createCardGroup">+</button>
+  </view>
+
+  <view class="card-group-list">
+    <block wx:for="{{cardGroups}}" wx:key="groupId">
+      <view class="card-group-item" bindtap="goToDetail" data-groupid="{{item.groupId}}" data-title="{{item.title}}">
+        <view class="item-title">{{item.title}}</view>
+        <view class="item-desc" wx:if="{{item.description}}">{{item.description}}</view>
+        <view class="item-time">{{item.updateTime}}</view>
+      </view>
+    </block>
+    <view wx:if="{{cardGroups.length === 0}}" class="empty-tip">
+      暂无卡牌组，点击右上角 + 创建
+    </view>
+  </view>
+</view>

@@ -1,0 +1,20 @@
+<view class="container">
+  <view class="stat-card">
+    <text class="stat-label">总学习时长</text>
+    <text class="stat-value">{{totalDuration}}秒</text>
+  </view>
+
+  <view class="chart-section">
+    <view class="section-title">卡牌组统计</view>
+    <view class="chart-placeholder">
+      图表组件待添加
+    </view>
+  </view>
+
+  <view class="chart-section">
+    <view class="section-title">学习趋势</view>
+    <view class="chart-placeholder">
+      图表组件待添加
+    </view>
+  </view>
+</view>

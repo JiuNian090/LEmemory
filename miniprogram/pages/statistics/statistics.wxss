@@ -1,0 +1,49 @@
+.container {
+  padding: 30rpx;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30rpx;
+}
+
+.stat-label {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 20rpx;
+}
+
+.stat-value {
+  font-size: 48rpx;
+  font-weight: 600;
+  color: #3cc51f;
+}
+
+.chart-section {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  margin-bottom: 20rpx;
+}
+
+.chart-placeholder {
+  height: 300rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 26rpx;
+  border: 1rpx dashed #ddd;
+  border-radius: 8rpx;
+}

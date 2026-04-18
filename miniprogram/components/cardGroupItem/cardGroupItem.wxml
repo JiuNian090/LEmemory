@@ -1,0 +1,5 @@
+<view class="card-group-item">
+  <view class="item-title">{{title}}</view>
+  <view class="item-desc" wx:if="{{description}}">{{description}}</view>
+  <view class="item-time">{{updateTime}}</view>
+</view>

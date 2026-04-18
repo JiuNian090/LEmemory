@@ -1,0 +1,22 @@
+.card-group-item {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.item-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  margin-bottom: 10rpx;
+}
+
+.item-desc {
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 10rpx;
+}
+
+.item-time {
+  font-size: 24rpx;
+  color: #999;
+}

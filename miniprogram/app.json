@@ -1,14 +1,44 @@
 {
   "pages": [
-    "pages/index/index",
-    "pages/logs/logs"
+    "pages/study/study",
+    "pages/cardDetail/cardDetail",
+    "pages/statistics/statistics",
+    "pages/mine/mine"
   ],
   "window": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "Weixin",
-    "navigationBarBackgroundColor": "#ffffff"
+    "navigationBarTitleText": "LEmemory",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f5f5f5"
+  },
+  "tabBar": {
+    "color": "#7A7E83",
+    "selectedColor": "#3cc51f",
+    "borderStyle": "black",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/study/study",
+        "iconPath": "images/graduation-hat-2.png",
+        "selectedIconPath": "images/graduation-hat.png",
+        "text": "学习"
+      },
+      {
+        "pagePath": "pages/statistics/statistics",
+        "iconPath": "images/status.png",
+        "selectedIconPath": "images/status-1.png",
+        "text": "统计"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "iconPath": "images/me.png",
+        "selectedIconPath": "images/me-1.png",
+        "text": "我的"
+      }
+    ]
   },
   "style": "v2",
   "componentFramework": "glass-easel",
-  "lazyCodeLoading": "requiredComponents"
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
 }
