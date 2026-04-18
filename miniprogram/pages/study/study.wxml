@@ -1,11 +1,8 @@
 <view class="container">
   <view class="page-header">
-    <text class="page-title">我的卡牌组</text>
-    <view class="header-action">
-      <button class="create-btn" bindtap="createCardGroup">
-        <text class="create-icon">+</text>
-        <text class="create-text">新建</text>
-      </button>
+    <view class="header-content">
+      <text class="header-title">📚 我的卡牌组</text>
+      <text class="header-subtitle">管理和学习你的卡牌</text>
     </view>
   </view>
 
@@ -15,7 +12,7 @@
         <block wx:for="{{cardGroups}}" wx:key="groupId">
           <view class="card-item" bindtap="goToDetail" data-groupid="{{item.groupId}}" data-title="{{item.title}}">
             <view class="card-icon">
-              <image class="icon-img" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
+              <text class="icon-text">🎴</text>
             </view>
             <view class="card-content">
               <view class="card-title">{{item.title}}</view>
@@ -33,8 +30,15 @@
       <view class="empty-state">
         <image class="empty-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
         <view class="empty-text">暂无卡牌组</view>
-        <view class="empty-desc">点击右上角新建按钮开始创建</view>
+        <view class="empty-desc">点击下方按钮开始创建</view>
       </view>
     </block>
+  </view>
+
+  <view class="fixed-action-btn">
+    <button class="create-btn" bindtap="createCardGroup">
+      <text class="create-icon">+</text>
+      <text class="create-text">新建卡牌组</text>
+    </button>
   </view>
 </view>

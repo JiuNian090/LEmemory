@@ -1,6 +1,9 @@
 <view class="container">
   <view class="page-header">
-    <text class="page-title">{{title}}</text>
+    <view class="header-content">
+      <text class="header-title">📖 {{title}}</text>
+      <text class="header-subtitle">开始你的学习之旅</text>
+    </view>
   </view>
 
   <view class="tabs-wrapper">

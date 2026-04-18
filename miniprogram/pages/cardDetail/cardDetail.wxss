@@ -1,33 +1,14 @@
-.container {
-  min-height: 100vh;
-  background: #f5f7fa;
-  padding-bottom: 40rpx;
-}
-
-.page-header {
-  background: linear-gradient(135deg, rgba(60, 197, 31, 0.15) 0%, rgba(45, 170, 21, 0.1) 100%);
-  padding: 40rpx 30rpx;
-  margin: 30rpx;
-  border-radius: 24rpx;
-  border: 2rpx solid rgba(60, 197, 31, 0.2);
-}
-
-.page-title {
-  font-size: 40rpx;
-  font-weight: 700;
-  color: #3cc51f;
-}
-
 .tabs-wrapper {
-  background: #fff;
+  background: var(--card-bg);
   padding: 20rpx 30rpx;
-  margin-bottom: 30rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  margin: 0 30rpx 30rpx;
+  border-radius: 24rpx;
+  box-shadow: var(--shadow);
 }
 
 .tabs {
   display: flex;
-  background: #f5f7fa;
+  background: var(--bg-color);
   border-radius: 16rpx;
   padding: 8rpx;
 }
@@ -37,16 +18,16 @@
   text-align: center;
   padding: 20rpx 0;
   font-size: 28rpx;
-  color: #666;
+  color: var(--text-secondary);
   border-radius: 12rpx;
   transition: all 0.3s ease;
 }
 
 .tab-item.active {
-  background: #fff;
-  color: #3cc51f;
+  background: var(--card-bg);
+  color: var(--primary-color);
   font-weight: 600;
-  box-shadow: 0 2rpx 8rpx rgba(60, 197, 31, 0.15);
+  box-shadow: 0 2rpx 8rpx rgba(52, 211, 153, 0.15);
 }
 
 .tab-content {
@@ -54,7 +35,7 @@
 }
 
 .study-section {
-  padding-top: 20rpx;
+  padding: 0 30rpx;
 }
 
 .card-wrapper {
@@ -79,48 +60,48 @@
   width: 100%;
   min-height: 500rpx;
   backface-visibility: hidden;
-  background: #fff;
+  background: var(--card-bg);
   border-radius: 24rpx;
   padding: 60rpx 40rpx;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-hover);
 }
 
 .card-face.back {
   transform: rotateY(180deg);
-  background: linear-gradient(135deg, #3cc51f 0%, #2daa15 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
 }
 
 .card-label {
   font-size: 24rpx;
-  color: #999;
+  color: var(--text-tertiary);
   margin-bottom: 20rpx;
   text-align: center;
 }
 
 .card-face.back .card-label {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .card-text {
   font-size: 34rpx;
-  color: #333;
+  color: var(--text-primary);
   text-align: center;
   line-height: 1.6;
   font-weight: 500;
 }
 
 .card-face.back .card-text {
-  color: #fff;
+  color: #ffffff;
 }
 
 .card-hint {
   text-align: center;
   font-size: 24rpx;
-  color: #999;
+  color: var(--text-tertiary);
   margin-bottom: 40rpx;
 }
 
@@ -133,14 +114,14 @@
 .nav-btn {
   width: 180rpx;
   height: 88rpx;
-  background: #fff;
-  color: #3cc51f;
+  background: var(--card-bg);
+  color: var(--primary-color);
   border-radius: 44rpx;
   font-size: 26rpx;
   font-weight: 500;
-  border: 2rpx solid #3cc51f;
+  border: 2rpx solid var(--primary-color);
   padding: 0;
-  box-shadow: 0 4rpx 12rpx rgba(60, 197, 31, 0.1);
+  box-shadow: 0 4rpx 12rpx rgba(52, 211, 153, 0.2);
 }
 
 .nav-btn::after {
@@ -148,9 +129,9 @@
 }
 
 .nav-btn[disabled] {
-  background: #f5f7fa;
-  color: #ccc;
-  border-color: #eee;
+  background: var(--bg-color);
+  color: var(--text-tertiary);
+  border-color: var(--border-color);
   box-shadow: none;
 }
 
@@ -163,75 +144,74 @@
 .card-index .current {
   font-size: 48rpx;
   font-weight: 700;
-  color: #3cc51f;
+  color: var(--primary-color);
 }
 
 .card-index .separator {
   margin: 0 8rpx;
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 .card-index .total {
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 .catalog-section,
 .cards-section,
 .favorites-section {
   padding: 0 30rpx;
-  padding-top: 10rpx;
 }
 
 .add-card-btn {
-  background: linear-gradient(135deg, #3cc51f 0%, #2daa15 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
   border-radius: 20rpx;
   padding: 30rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 30rpx;
-  box-shadow: 0 4rpx 20rpx rgba(60, 197, 31, 0.25);
+  box-shadow: 0 4rpx 20rpx rgba(52, 211, 153, 0.3);
 }
 
 .add-icon {
   font-size: 40rpx;
-  color: #fff;
+  color: #ffffff;
   margin-right: 12rpx;
   font-weight: 300;
 }
 
 .add-text {
   font-size: 30rpx;
-  color: #fff;
+  color: #ffffff;
   font-weight: 500;
 }
 
 .card-list {
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  gap: 24rpx;
 }
 
 .catalog-item,
 .card-item,
 .favorite-item {
-  background: #fff;
-  border-radius: 20rpx;
+  background: var(--card-bg);
+  border-radius: 24rpx;
   padding: 30rpx;
   display: flex;
   align-items: flex-start;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow);
 }
 
 .catalog-num {
   width: 60rpx;
   height: 60rpx;
-  background: linear-gradient(135deg, #3cc51f 0%, #2daa15 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
   border-radius: 16rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: #ffffff;
   font-size: 26rpx;
   font-weight: 600;
   margin-right: 20rpx;
@@ -244,14 +224,14 @@
 
 .catalog-question {
   font-size: 30rpx;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 500;
   margin-bottom: 12rpx;
 }
 
 .catalog-answer {
   font-size: 26rpx;
-  color: #666;
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
@@ -262,12 +242,12 @@
 .item-index {
   width: 50rpx;
   height: 50rpx;
-  background: #f5f7fa;
+  background: var(--bg-color);
   border-radius: 12rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #3cc51f;
+  color: var(--primary-color);
   font-size: 24rpx;
   font-weight: 600;
 }
@@ -288,14 +268,14 @@
 }
 
 .item-question .label {
-  color: #3cc51f;
+  color: var(--primary-color);
   font-weight: 600;
   margin-right: 12rpx;
   font-size: 28rpx;
 }
 
 .item-answer .label {
-  color: #2daa15;
+  color: var(--primary-dark);
   font-weight: 600;
   margin-right: 12rpx;
   font-size: 28rpx;
@@ -305,24 +285,24 @@
 .item-answer .text {
   flex: 1;
   font-size: 28rpx;
-  color: #333;
+  color: var(--text-primary);
   line-height: 1.5;
 }
 
 .item-answer .text {
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .favorite-icon {
   font-size: 40rpx;
   margin-right: 20rpx;
-  color: #ffc107;
+  color: var(--warning-color);
 }
 
 .favorite-content {
   flex: 1;
   font-size: 28rpx;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .empty-state {
@@ -341,12 +321,12 @@
 
 .empty-text {
   font-size: 30rpx;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 12rpx;
   font-weight: 500;
 }
 
 .empty-desc {
   font-size: 26rpx;
-  color: #999;
+  color: var(--text-tertiary);
 }
