@@ -35,7 +35,7 @@ page {
 .page-header {
   position: relative;
   margin: 30rpx 30rpx 30rpx;
-  padding: 80rpx 30rpx 80rpx;
+  padding: 40rpx 30rpx 40rpx;
   background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
   border-bottom: 2rpx solid var(--border-color);
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);

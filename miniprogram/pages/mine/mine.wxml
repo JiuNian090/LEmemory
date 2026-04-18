@@ -1,33 +1,24 @@
 <view class="container">
   <view class="page-header">
-    <view class="header-content">
-      <text class="header-title">👤 个人中心</text>
-      <text class="header-subtitle">管理你的账户</text>
+    <view class="header-content user-header">
+      <view class="user-wrapper">
+        <view class="avatar-wrapper">
+          <image class="avatar" src="{{userInfo ? userInfo.avatarUrl : '/images/me.png'}}" mode="aspectFill"></image>
+          <view class="avatar-badge" wx:if="{{userInfo}}"></view>
+        </view>
+        <view class="user-info">
+          <view class="nickname">{{userInfo ? userInfo.nickName : '点击登录'}}</view>
+          <view class="user-desc" wx:if="{{userInfo}}">欢迎使用 LEmemory</view>
+        </view>
+        <button wx:if="{{!userInfo && canIUse}}" class="login-btn" bindtap="getUserProfile">
+          <text class="btn-icon">✨</text>
+          <text class="btn-text">立即登录</text>
+        </button>
+      </view>
     </view>
   </view>
 
   <view class="content-section">
-    <view class="section">
-      <view class="section-body">
-        <view class="user-card">
-          <view class="user-info">
-            <view class="avatar-wrapper">
-              <image class="avatar" src="{{userInfo ? userInfo.avatarUrl : '/images/me.png'}}" mode="aspectFill"></image>
-              <view class="avatar-badge" wx:if="{{userInfo}}"></view>
-            </view>
-            <view class="user-detail">
-              <view class="nickname">{{userInfo ? userInfo.nickName : '点击登录'}}</view>
-              <view class="user-desc" wx:if="{{userInfo}}">欢迎使用 LEmemory</view>
-            </view>
-          </view>
-          <button wx:if="{{!userInfo && canIUse}}" class="login-btn" bindtap="getUserProfile">
-            <text class="btn-icon">👤</text>
-            <text class="btn-text">登录</text>
-          </button>
-        </view>
-      </view>
-    </view>
-
     <view class="section">
       <view class="section-header">
         <view class="section-icon data-icon">

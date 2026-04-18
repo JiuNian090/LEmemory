@@ -2,68 +2,84 @@
   padding: 0;
 }
 
-.user-card {
+.user-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
 }
 
-.user-info {
+.user-wrapper {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  flex: 1;
+  gap: 24rpx;
 }
 
 .avatar-wrapper {
   position: relative;
-  margin-right: 24rpx;
 }
 
 .avatar {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 60rpx;
-  background: var(--bg-color);
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 70rpx;
+  background: rgba(255, 255, 255, 0.3);
+  border: 4rpx solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.15);
 }
 
 .avatar-badge {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 32rpx;
-  height: 32rpx;
-  background: var(--primary-color);
+  right: 4rpx;
+  bottom: 4rpx;
+  width: 36rpx;
+  height: 36rpx;
+  background: #4ade80;
   border-radius: 50%;
-  border: 4rpx solid var(--card-bg);
+  border: 4rpx solid #ffffff;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
 }
 
-.user-detail {
+.user-info {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
 }
 
 .nickname {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 8rpx;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
 }
 
 .user-desc {
-  font-size: 24rpx;
-  color: var(--text-tertiary);
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 500;
 }
 
 .login-btn {
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-  border-radius: 40rpx;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: 50rpx;
   padding: 16rpx 32rpx;
   border: none;
-  color: #ffffff;
+  color: var(--primary-color);
   font-size: 26rpx;
+  font-weight: 600;
   line-height: 1;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.login-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
 }
 
 .login-btn::after {
@@ -71,12 +87,12 @@
 }
 
 .btn-icon {
-  font-size: 28rpx;
-  margin-right: 8rpx;
+  font-size: 32rpx;
+  margin-right: 10rpx;
 }
 
 .btn-text {
-  font-size: 26rpx;
+  font-size: 28rpx;
 }
 
 .menu-list {
