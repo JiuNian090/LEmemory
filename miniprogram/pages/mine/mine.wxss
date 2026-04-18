@@ -2,6 +2,10 @@
   padding: 0;
 }
 
+.page-header {
+  padding: 40rpx 30rpx 40rpx !important;
+}
+
 .user-header {
   display: flex;
   align-items: center;
