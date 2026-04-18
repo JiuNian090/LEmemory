@@ -18,7 +18,7 @@
               <view class="card-title">{{item.title}}</view>
               <view class="card-desc" wx:if="{{item.description}}">{{item.description}}</view>
               <view class="card-meta">
-                <text class="meta-item">{{item.createTime}}</text>
+                <text class="meta-item">{{item.updateTime}}</text>
               </view>
             </view>
             <view class="card-arrow">›</view>
@@ -40,5 +40,28 @@
       <text class="create-icon">+</text>
       <text class="create-text">新建卡牌组</text>
     </button>
+  </view>
+
+  <!-- 创建卡牌组弹窗 -->
+  <view class="modal-overlay" wx:if="{{showCreateDialog}}" bindtap="closeDialog">
+    <view class="modal-content" catchtap="stopPropagation">
+      <view class="modal-header">
+        <text class="modal-title">新建卡牌组</text>
+      </view>
+      <view class="modal-body">
+        <view class="input-group">
+          <text class="input-label">标题 *</text>
+          <input class="input-field" placeholder="请输入卡牌组标题" value="{{newTitle}}" bindinput="onTitleInput" maxlength="30"/>
+        </view>
+        <view class="input-group">
+          <text class="input-label">描述</text>
+          <textarea class="textarea-field" placeholder="描述一下这个卡牌组（可选）" value="{{newDesc}}" bindinput="onDescInput" maxlength="100" auto-height/>
+        </view>
+      </view>
+      <view class="modal-footer">
+        <button class="btn btn-cancel" bindtap="closeDialog">取消</button>
+        <button class="btn btn-confirm" bindtap="confirmCreate">创建</button>
+      </view>
+    </view>
   </view>
 </view>

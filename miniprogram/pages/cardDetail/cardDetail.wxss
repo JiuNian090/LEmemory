@@ -330,3 +330,178 @@
   font-size: 26rpx;
   color: var(--text-tertiary);
 }
+
+.item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.item-actions {
+  display: flex;
+  gap: 12rpx;
+}
+
+.action-btn {
+  padding: 8rpx 20rpx;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+}
+
+.action-btn.edit {
+  background: var(--bg-color);
+  color: var(--primary-color);
+}
+
+.action-btn.delete {
+  background: #fff1f0;
+  color: #ff4d4f;
+}
+
+.item-footer {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid var(--border-color);
+}
+
+.favorite-btn {
+  display: inline-block;
+  padding: 8rpx 20rpx;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  background: var(--bg-color);
+  color: var(--text-secondary);
+}
+
+.favorite-btn.favorited {
+  background: #fff7e6;
+  color: #faad14;
+}
+
+.favorite-question {
+  font-size: 30rpx;
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-bottom: 8rpx;
+}
+
+.favorite-answer {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+}
+
+.unfavorite-btn {
+  padding: 8rpx 20rpx;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  background: #fff1f0;
+  color: #ff4d4f;
+  flex-shrink: 0;
+}
+
+/* 弹窗样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 30rpx;
+}
+
+.modal-content {
+  background: var(--card-bg);
+  border-radius: 24rpx;
+  width: 100%;
+  max-width: 600rpx;
+  overflow: hidden;
+  animation: modalIn 0.3s ease;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-header {
+  padding: 30rpx;
+  border-bottom: 1rpx solid var(--border-color);
+}
+
+.modal-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 30rpx;
+}
+
+.input-group {
+  margin-bottom: 30rpx;
+}
+
+.input-group:last-child {
+  margin-bottom: 0;
+}
+
+.input-label {
+  display: block;
+  font-size: 28rpx;
+  color: var(--text-secondary);
+  margin-bottom: 12rpx;
+}
+
+.textarea-field {
+  width: 100%;
+  padding: 20rpx;
+  background: var(--bg-color);
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: var(--text-primary);
+  min-height: 120rpx;
+  box-sizing: border-box;
+}
+
+.modal-footer {
+  display: flex;
+  padding: 20rpx 30rpx;
+  border-top: 1rpx solid var(--border-color);
+  gap: 20rpx;
+}
+
+.btn {
+  flex: 1;
+  padding: 24rpx;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  border: none;
+}
+
+.btn::after {
+  border: none;
+}
+
+.btn-cancel {
+  background: var(--bg-color);
+  color: var(--text-secondary);
+}
+
+.btn-confirm {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  color: #ffffff;
+}

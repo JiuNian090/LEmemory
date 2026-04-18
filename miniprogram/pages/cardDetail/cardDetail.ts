@@ -1,6 +1,46 @@
-const { cardCollection, favoriteCollection, generateId } = require('../../utils/db')
+import { cardCollection, favoriteCollection, studyRecordCollection, generateId } from '../../utils/db'
 
-Page({
+interface CardItem {
+  _id?: string
+  cardId: string
+  groupId: string
+  userId?: string
+  front: string
+  back: string
+  createTime: Date
+  _openid?: string
+}
+
+interface FavoriteItem {
+  _id?: string
+  favoriteId: string
+  userId?: string
+  cardId: string
+  groupId: string
+  createTime: Date
+  _openid?: string
+  card?: CardItem
+}
+
+interface CardDetailPageData {
+  groupId: string
+  title: string
+  currentTab: number
+  tabs: string[]
+  cards: CardItem[]
+  favorites: FavoriteItem[]
+  currentCardIndex: number
+  isFlipped: boolean
+  studyStartTime: number | null
+  showCardDialog: boolean
+  dialogMode: 'add' | 'edit'
+  editCardId: string
+  newFront: string
+  newBack: string
+  favoriteCardIds: Set<string>
+}
+
+Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>({
   data: {
     groupId: '',
     title: '',
@@ -11,18 +51,24 @@ Page({
     currentCardIndex: 0,
     isFlipped: false,
     studyStartTime: null,
-    timer: null
+    showCardDialog: false,
+    dialogMode: 'add',
+    editCardId: '',
+    newFront: '',
+    newBack: '',
+    favoriteCardIds: new Set()
   },
 
   onLoad(options: any) {
     this.setData({
-      groupId: options.groupId,
-      title: options.title
+      groupId: options.groupId || '',
+      title: options.title || ''
     })
     wx.setNavigationBarTitle({
-      title: options.title
+      title: options.title || '卡牌详情'
     })
     this.loadCards()
+    this.loadFavorites()
   },
 
   onShow() {
@@ -33,32 +79,59 @@ Page({
     this.stopStudyTimer()
   },
 
+  /**
+   * 加载卡牌列表
+   */
   async loadCards() {
     try {
       const { data } = await cardCollection.where({
         groupId: this.data.groupId
       }).get()
+
       this.setData({
-        cards: data
+        cards: data as CardItem[]
       })
+      console.log('[CardDetail] 加载卡牌成功', data.length)
     } catch (err) {
-      console.error('加载卡牌失败', err)
+      console.error('[CardDetail] 加载卡牌失败', err)
+      wx.showToast({
+        title: '加载失败',
+        icon: 'none'
+      })
     }
   },
 
+  /**
+   * 加载收藏列表
+   */
   async loadFavorites() {
     try {
       const { data } = await favoriteCollection.where({
         groupId: this.data.groupId
       }).get()
+
+      const favorites = data as FavoriteItem[]
+      const favoriteCardIds = new Set(favorites.map(f => f.cardId))
+
+      const cardsMap = new Map(this.data.cards.map(c => [c.cardId, c]))
+      const favoritesWithCards = favorites.map(f => ({
+        ...f,
+        card: cardsMap.get(f.cardId)
+      }))
+
       this.setData({
-        favorites: data
+        favorites: favoritesWithCards,
+        favoriteCardIds
       })
+      console.log('[CardDetail] 加载收藏成功', favorites.length)
     } catch (err) {
-      console.error('加载收藏失败', err)
+      console.error('[CardDetail] 加载收藏失败', err)
     }
   },
 
+  /**
+   * 切换标签页
+   */
   switchTab(e: WechatMiniprogram.TouchEvent) {
     const index = e.currentTarget.dataset.index
     this.setData({
@@ -69,12 +142,18 @@ Page({
     }
   },
 
+  /**
+   * 开始学习计时
+   */
   startStudyTimer() {
     this.setData({
       studyStartTime: Date.now()
     })
   },
 
+  /**
+   * 停止学习计时并保存
+   */
   stopStudyTimer() {
     if (this.data.studyStartTime) {
       const duration = Math.floor((Date.now() - this.data.studyStartTime) / 1000)
@@ -82,9 +161,14 @@ Page({
     }
   },
 
+  /**
+   * 保存学习记录
+   */
   async saveStudyRecord(duration: number) {
-    if (duration < 5) return
-    const { studyRecordCollection } = require('../../utils/db')
+    if (duration < 5) {
+      console.log('[CardDetail] 学习时长太短，不保存')
+      return
+    }
     try {
       await studyRecordCollection.add({
         data: {
@@ -94,11 +178,15 @@ Page({
           studyDate: new Date()
         }
       })
+      console.log('[CardDetail] 保存学习记录成功', duration, '秒')
     } catch (err) {
-      console.error('保存学习记录失败', err)
+      console.error('[CardDetail] 保存学习记录失败', err)
     }
   },
 
+  /**
+   * 上一张卡牌
+   */
   prevCard() {
     if (this.data.currentCardIndex > 0) {
       this.setData({
@@ -108,6 +196,9 @@ Page({
     }
   },
 
+  /**
+   * 下一张卡牌
+   */
   nextCard() {
     if (this.data.currentCardIndex < this.data.cards.length - 1) {
       this.setData({
@@ -117,75 +208,228 @@ Page({
     }
   },
 
+  /**
+   * 翻牌
+   */
   flipCard() {
     this.setData({
       isFlipped: !this.data.isFlipped
     })
   },
 
-  async addCard() {
-    wx.showModal({
-      title: '添加卡牌',
-      editable: true,
-      placeholderText: '正面（问题）',
-      success: (res) => {
-        if (res.confirm) {
-          const front = res.content
-          wx.showModal({
-            title: '背面内容',
-            editable: true,
-            placeholderText: '背面（答案）',
-            success: (res2) => {
-              if (res2.confirm) {
-                this.createCard(front, res2.content)
-              }
-            }
-          })
-        }
-      }
+  /**
+   * 显示添加卡牌弹窗
+   */
+  showAddCardDialog() {
+    this.setData({
+      showCardDialog: true,
+      dialogMode: 'add',
+      editCardId: '',
+      newFront: '',
+      newBack: ''
     })
   },
 
-  async createCard(front: string, back: string) {
-    if (!front.trim() || !back.trim()) {
+  /**
+   * 显示编辑卡牌弹窗
+   */
+  showEditCardDialog(e: WechatMiniprogram.TouchEvent) {
+    const { cardid, front, back } = e.currentTarget.dataset
+    this.setData({
+      showCardDialog: true,
+      dialogMode: 'edit',
+      editCardId: cardid,
+      newFront: front,
+      newBack: back
+    })
+  },
+
+  /**
+   * 关闭弹窗
+   */
+  closeDialog() {
+    this.setData({
+      showCardDialog: false
+    })
+  },
+
+  /**
+   * 输入正面
+   */
+  onFrontInput(e: WechatMiniprogram.Input) {
+    this.setData({
+      newFront: e.detail.value
+    })
+  },
+
+  /**
+   * 输入背面
+   */
+  onBackInput(e: WechatMiniprogram.Input) {
+    this.setData({
+      newBack: e.detail.value
+    })
+  },
+
+  /**
+   * 确认保存卡牌
+   */
+  confirmSaveCard() {
+    const { newFront, newBack, dialogMode, editCardId, cards } = this.data
+    
+    if (!newFront.trim() || !newBack.trim()) {
       wx.showToast({
-        title: '内容不能为空',
+        title: '请填写完整内容',
         icon: 'none'
       })
       return
     }
 
+    if (dialogMode === 'add') {
+      this.createCard(newFront, newBack)
+    } else {
+      this.updateCard(editCardId, newFront, newBack)
+    }
+  },
+
+  /**
+   * 创建卡牌
+   */
+  async createCard(front: string, back: string) {
     try {
+      wx.showLoading({ title: '添加中...' })
+
       await cardCollection.add({
         data: {
           cardId: generateId(),
           groupId: this.data.groupId,
-          front: front,
-          back: back,
+          front: front.trim(),
+          back: back.trim(),
           createTime: new Date()
         }
       })
+
       wx.showToast({
         title: '添加成功',
         icon: 'success'
       })
+
+      this.closeDialog()
       this.loadCards()
     } catch (err) {
-      console.error('添加卡牌失败', err)
+      console.error('[CardDetail] 添加卡牌失败', err)
       wx.showToast({
         title: '添加失败',
         icon: 'none'
       })
+    } finally {
+      wx.hideLoading()
     }
   },
 
-  async toggleFavorite(card: any) {
+  /**
+   * 更新卡牌
+   */
+  async updateCard(cardId: string, front: string, back: string) {
     try {
-      const { data } = await favoriteCollection.where({
-        cardId: card.cardId
-      }).get()
-      if (data.length > 0) {
-        await favoriteCollection.doc(data[0]._id).remove()
+      wx.showLoading({ title: '更新中...' })
+
+      const card = this.data.cards.find(c => c.cardId === cardId)
+      if (card && card._id) {
+        await cardCollection.doc(card._id).update({
+          data: {
+            front: front.trim(),
+            back: back.trim()
+          }
+        })
+
+        wx.showToast({
+          title: '更新成功',
+          icon: 'success'
+        })
+
+        this.closeDialog()
+        this.loadCards()
+      }
+    } catch (err) {
+      console.error('[CardDetail] 更新卡牌失败', err)
+      wx.showToast({
+        title: '更新失败',
+        icon: 'none'
+      })
+    } finally {
+      wx.hideLoading()
+    }
+  },
+
+  /**
+   * 删除卡牌（带确认）
+   */
+  deleteCard(e: WechatMiniprogram.TouchEvent) {
+    const { cardid } = e.currentTarget.dataset
+    
+    wx.showModal({
+      title: '确认删除',
+      content: '删除后无法恢复，确定要删除这张卡牌吗？',
+      confirmColor: '#ff4d4f',
+      success: (res) => {
+        if (res.confirm) {
+          this.doDeleteCard(cardid)
+        }
+      }
+    })
+  },
+
+  /**
+   * 执行删除
+   */
+  async doDeleteCard(cardId: string) {
+    try {
+      wx.showLoading({ title: '删除中...' })
+
+      const card = this.data.cards.find(c => c.cardId === cardId)
+      if (card && card._id) {
+        await cardCollection.doc(card._id).remove()
+        
+        wx.showToast({
+          title: '删除成功',
+          icon: 'success'
+        })
+        
+        this.loadCards()
+      }
+    } catch (err) {
+      console.error('[CardDetail] 删除卡牌失败', err)
+      wx.showToast({
+        title: '删除失败',
+        icon: 'none'
+      })
+    } finally {
+      wx.hideLoading()
+    }
+  },
+
+  /**
+   * 切换收藏状态
+   */
+  async toggleFavorite(e: WechatMiniprogram.TouchEvent) {
+    const { cardid } = e.currentTarget.dataset
+    const isFavorited = this.data.favoriteCardIds.has(cardid)
+
+    try {
+      if (isFavorited) {
+        const favorite = this.data.favorites.find(f => f.cardId === cardid)
+        if (favorite && favorite._id) {
+          await favoriteCollection.doc(favorite._id).remove()
+        }
+        
+        const newFavoriteCardIds = new Set(this.data.favoriteCardIds)
+        newFavoriteCardIds.delete(cardid)
+        
+        this.setData({
+          favoriteCardIds: newFavoriteCardIds
+        })
+
         wx.showToast({
           title: '取消收藏',
           icon: 'none'
@@ -194,18 +438,34 @@ Page({
         await favoriteCollection.add({
           data: {
             favoriteId: generateId(),
-            cardId: card.cardId,
+            cardId: cardid,
             groupId: this.data.groupId,
             createTime: new Date()
           }
         })
+
+        const newFavoriteCardIds = new Set(this.data.favoriteCardIds)
+        newFavoriteCardIds.add(cardid)
+        
+        this.setData({
+          favoriteCardIds: newFavoriteCardIds
+        })
+
         wx.showToast({
           title: '收藏成功',
           icon: 'success'
         })
       }
+
+      if (this.data.currentTab === 3) {
+        this.loadFavorites()
+      }
     } catch (err) {
-      console.error('操作收藏失败', err)
+      console.error('[CardDetail] 操作收藏失败', err)
+      wx.showToast({
+        title: '操作失败',
+        icon: 'none'
+      })
     }
   }
 })

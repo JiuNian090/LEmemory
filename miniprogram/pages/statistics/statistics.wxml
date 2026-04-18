@@ -7,6 +7,7 @@
   </view>
 
   <view class="content-section">
+    <!-- 总学习时长 -->
     <view class="section">
       <view class="section-header">
         <view class="section-icon data-icon">
@@ -19,12 +20,8 @@
       </view>
     </view>
 
+    <!-- 统计卡片 -->
     <view class="stats-grid">
-      <view class="stat-item">
-        <view class="stat-icon">📊</view>
-        <view class="stat-value">{{totalDuration}}</view>
-        <view class="stat-label">学习时长(秒)</view>
-      </view>
       <view class="stat-item">
         <view class="stat-icon">📚</view>
         <view class="stat-value">{{groupCount}}</view>
@@ -37,21 +34,32 @@
       </view>
     </view>
 
+    <!-- 近期学习趋势 -->
     <view class="section">
       <view class="section-header">
         <view class="section-icon data-icon">
           <text class="icon-text">📈</text>
         </view>
-        <text class="section-title">近期学习趋势</text>
+        <text class="section-title">近7天学习趋势</text>
       </view>
       <view class="section-body">
-        <view class="chart-placeholder">
-          <image class="placeholder-icon" src="/images/status.png" mode="aspectFit"></image>
-          <text class="placeholder-text">图表功能开发中</text>
+        <view class="trend-chart" wx:if="{{weekTrend.length > 0}}">
+          <view class="trend-item" wx:for="{{weekTrend}}" wx:key="date">
+            <view class="trend-bar-wrapper">
+              <view class="trend-bar" style="height: {{item.duration > 0 ? Math.max(20, (item.duration / maxDuration) * 200) : 0}}rpx"></view>
+            </view>
+            <view class="trend-label">{{item.date}}</view>
+            <view class="trend-value">{{item.duration > 0 ? formatDuration(item.duration) : '-'}}</view>
+          </view>
+        </view>
+        <view class="empty-state" wx:else>
+          <image class="empty-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
+          <view class="empty-text">暂无学习记录</view>
         </view>
       </view>
     </view>
 
+    <!-- 各卡牌组学习时长 -->
     <view class="section">
       <view class="section-header">
         <view class="section-icon data-icon">
@@ -60,9 +68,20 @@
         <text class="section-title">各卡牌组学习时长</text>
       </view>
       <view class="section-body">
-        <view class="chart-placeholder">
-          <image class="placeholder-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
-          <text class="placeholder-text">图表功能开发中</text>
+        <view class="group-list" wx:if="{{groupDurations.length > 0}}">
+          <view class="group-item" wx:for="{{groupDurations}}" wx:key="groupId">
+            <view class="group-info">
+              <view class="group-title">{{item.title}}</view>
+              <view class="group-duration">{{formatDuration(item.duration)}}</view>
+            </view>
+            <view class="group-bar-wrapper">
+              <view class="group-bar" style="width: {{(item.duration / maxGroupDuration) * 100}}%"></view>
+            </view>
+          </view>
+        </view>
+        <view class="empty-state" wx:else>
+          <image class="empty-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
+          <view class="empty-text">暂无学习记录</view>
         </view>
       </view>
     </view>

@@ -1,40 +1,116 @@
-const { cardGroupCollection, generateId } = require('../../utils/db')
+import { cardGroupCollection, generateId } from '../../utils/db'
+import { formatDate } from '../../utils/time'
 
-Page({
+interface CardGroupItem {
+  _id?: string
+  groupId: string
+  userId?: string
+  title: string
+  description?: string
+  createTime: Date
+  updateTime: Date
+  _openid?: string
+}
+
+interface StudyPageData {
+  cardGroups: CardGroupItem[]
+  isRefreshing: boolean
+  showCreateDialog: boolean
+  newTitle: string
+  newDesc: string
+}
+
+Page<StudyPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>({
   data: {
-    cardGroups: []
+    cardGroups: [],
+    isRefreshing: false,
+    showCreateDialog: false,
+    newTitle: '',
+    newDesc: ''
   },
 
   onShow() {
     this.loadCardGroups()
   },
 
+  onPullDownRefresh() {
+    this.setData({ isRefreshing: true })
+    this.loadCardGroups()
+  },
+
+  /**
+   * 加载卡牌组列表
+   */
   async loadCardGroups() {
     try {
       const { data } = await cardGroupCollection.orderBy('updateTime', 'desc').get()
+      
+      const formattedData = data.map((item: any) => ({
+        ...item,
+        updateTime: formatDate(new Date(item.updateTime))
+      }))
+
       this.setData({
-        cardGroups: data
+        cardGroups: formattedData
       })
+      console.log('[StudyPage] 加载卡牌组成功', formattedData.length)
     } catch (err) {
-      console.error('加载卡牌组失败', err)
+      console.error('[StudyPage] 加载卡牌组失败', err)
+      wx.showToast({
+        title: '加载失败',
+        icon: 'none'
+      })
+    } finally {
+      this.setData({ isRefreshing: false })
+      wx.stopPullDownRefresh()
     }
   },
 
+  /**
+   * 显示创建弹窗
+   */
   createCardGroup() {
-    wx.showModal({
-      title: '创建卡牌组',
-      editable: true,
-      placeholderText: '请输入标题',
-      success: (res) => {
-        if (res.confirm) {
-          this.addCardGroup(res.content)
-        }
-      }
+    this.setData({
+      showCreateDialog: true,
+      newTitle: '',
+      newDesc: ''
     })
   },
 
-  async addCardGroup(title: string) {
-    if (!title.trim()) {
+  /**
+   * 关闭创建弹窗
+   */
+  closeDialog() {
+    this.setData({
+      showCreateDialog: false
+    })
+  },
+
+  /**
+   * 输入标题
+   */
+  onTitleInput(e: WechatMiniprogram.Input) {
+    this.setData({
+      newTitle: e.detail.value
+    })
+  },
+
+  /**
+   * 输入描述
+   */
+  onDescInput(e: WechatMiniprogram.Input) {
+    this.setData({
+      newDesc: e.detail.value
+    })
+  },
+
+  /**
+   * 确认创建卡牌组
+   */
+  confirmCreate() {
+    const { newTitle, newDesc } = this.data
+    
+    if (!newTitle.trim()) {
       wx.showToast({
         title: '请输入标题',
         icon: 'none'
@@ -42,30 +118,47 @@ Page({
       return
     }
 
+    this.addCardGroup(newTitle, newDesc)
+  },
+
+  /**
+   * 添加卡牌组到数据库
+   */
+  async addCardGroup(title: string, description: string) {
     try {
+      wx.showLoading({ title: '创建中...' })
+
       await cardGroupCollection.add({
         data: {
           groupId: generateId(),
-          title: title,
-          description: '',
+          title: title.trim(),
+          description: description.trim(),
           createTime: new Date(),
           updateTime: new Date()
         }
       })
+
       wx.showToast({
         title: '创建成功',
         icon: 'success'
       })
+      
+      this.closeDialog()
       this.loadCardGroups()
     } catch (err) {
-      console.error('创建卡牌组失败', err)
+      console.error('[StudyPage] 创建卡牌组失败', err)
       wx.showToast({
         title: '创建失败',
         icon: 'none'
       })
+    } finally {
+      wx.hideLoading()
     }
   },
 
+  /**
+   * 跳转到卡牌详情页
+   */
   goToDetail(e: WechatMiniprogram.TouchEvent) {
     const { groupid, title } = e.currentTarget.dataset
     wx.navigateTo({

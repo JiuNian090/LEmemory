@@ -17,6 +17,7 @@
   </view>
 
   <view class="tab-content">
+    <!-- 学习标签页 -->
     <view wx:if="{{currentTab === 0}}" class="study-section">
       <block wx:if="{{cards.length > 0}}">
         <view class="card-wrapper" bindtap="flipCard">
@@ -53,57 +54,112 @@
       </view>
     </view>
 
+    <!-- 目录标签页 -->
     <view wx:if="{{currentTab === 1}}" class="catalog-section">
-      <view wx:for="{{cards}}" wx:key="cardId" class="catalog-item">
-        <view class="catalog-num">{{index + 1}}</view>
-        <view class="catalog-content">
-          <view class="catalog-question">{{item.front}}</view>
-          <view class="catalog-answer" wx:if="{{item.back}}">{{item.back}}</view>
+      <block wx:if="{{cards.length > 0}}">
+        <view wx:for="{{cards}}" wx:key="cardId" class="catalog-item">
+          <view class="catalog-num">{{index + 1}}</view>
+          <view class="catalog-content">
+            <view class="catalog-question">{{item.front}}</view>
+            <view class="catalog-answer" wx:if="{{item.back}}">{{item.back}}</view>
+          </view>
         </view>
-      </view>
-      <view wx:if="{{cards.length === 0}}" class="empty-state">
+      </block>
+      <view wx:else class="empty-state">
         <image class="empty-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
         <view class="empty-text">暂无卡牌</view>
       </view>
     </view>
 
+    <!-- 卡牌标签页 -->
     <view wx:if="{{currentTab === 2}}" class="cards-section">
-      <view class="add-card-btn" bindtap="addCard">
+      <view class="add-card-btn" bindtap="showAddCardDialog">
         <text class="add-icon">+</text>
         <text class="add-text">添加卡牌</text>
       </view>
-      <view class="card-list">
-        <view wx:for="{{cards}}" wx:key="cardId" class="card-item">
-          <view class="item-header">
-            <view class="item-index">{{index + 1}}</view>
-          </view>
-          <view class="item-content">
-            <view class="item-question">
-              <text class="label">Q:</text>
-              <text class="text">{{item.front}}</text>
+      <block wx:if="{{cards.length > 0}}">
+        <view class="card-list">
+          <view wx:for="{{cards}}" wx:key="cardId" class="card-item">
+            <view class="item-header">
+              <view class="item-index">{{index + 1}}</view>
+              <view class="item-actions">
+                <view class="action-btn edit" bindtap="showEditCardDialog" data-cardid="{{item.cardId}}" data-front="{{item.front}}" data-back="{{item.back}}">
+                  编辑
+                </view>
+                <view class="action-btn delete" bindtap="deleteCard" data-cardid="{{item.cardId}}">
+                  删除
+                </view>
+              </view>
             </view>
-            <view class="item-answer">
-              <text class="label">A:</text>
-              <text class="text">{{item.back}}</text>
+            <view class="item-content">
+              <view class="item-question">
+                <text class="label">Q:</text>
+                <text class="text">{{item.front}}</text>
+              </view>
+              <view class="item-answer">
+                <text class="label">A:</text>
+                <text class="text">{{item.back}}</text>
+              </view>
+            </view>
+            <view class="item-footer">
+              <view class="favorite-btn {{favoriteCardIds.has(item.cardId) ? 'favorited' : ''}}" bindtap="toggleFavorite" data-cardid="{{item.cardId}}">
+                {{favoriteCardIds.has(item.cardId) ? '★ 已收藏' : '☆ 收藏'}}
+              </view>
             </view>
           </view>
         </view>
-      </view>
-      <view wx:if="{{cards.length === 0}}" class="empty-state">
+      </block>
+      <view wx:else class="empty-state">
         <image class="empty-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
         <view class="empty-text">暂无卡牌</view>
         <view class="empty-desc">点击上方按钮添加</view>
       </view>
     </view>
 
+    <!-- 收藏标签页 -->
     <view wx:if="{{currentTab === 3}}" class="favorites-section">
-      <view wx:for="{{favorites}}" wx:key="favoriteId" class="favorite-item">
-        <view class="favorite-icon">★</view>
-        <view class="favorite-content">{{item.cardId}}</view>
-      </view>
-      <view wx:if="{{favorites.length === 0}}" class="empty-state">
+      <block wx:if="{{favorites.length > 0}}">
+        <view wx:for="{{favorites}}" wx:key="favoriteId" class="favorite-item">
+          <view class="favorite-icon">★</view>
+          <view class="favorite-content" wx:if="{{item.card}}">
+            <view class="favorite-question">{{item.card.front}}</view>
+            <view class="favorite-answer">{{item.card.back}}</view>
+          </view>
+          <view class="favorite-content" wx:else>
+            <view class="favorite-question">卡牌已删除</view>
+          </view>
+          <view class="unfavorite-btn" bindtap="toggleFavorite" data-cardid="{{item.cardId}}">
+            取消收藏
+          </view>
+        </view>
+      </block>
+      <view wx:else class="empty-state">
         <image class="empty-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
         <view class="empty-text">暂无收藏</view>
+        <view class="empty-desc">在"卡牌"标签页收藏喜欢的卡牌</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 添加/编辑卡牌弹窗 -->
+  <view class="modal-overlay" wx:if="{{showCardDialog}}" bindtap="closeDialog">
+    <view class="modal-content" catchtap="stopPropagation">
+      <view class="modal-header">
+        <text class="modal-title">{{dialogMode === 'add' ? '添加卡牌' : '编辑卡牌'}}</text>
+      </view>
+      <view class="modal-body">
+        <view class="input-group">
+          <text class="input-label">正面（问题） *</text>
+          <textarea class="textarea-field" placeholder="请输入卡牌正面内容" value="{{newFront}}" bindinput="onFrontInput" maxlength="200" auto-height/>
+        </view>
+        <view class="input-group">
+          <text class="input-label">背面（答案） *</text>
+          <textarea class="textarea-field" placeholder="请输入卡牌背面内容" value="{{newBack}}" bindinput="onBackInput" maxlength="500" auto-height/>
+        </view>
+      </view>
+      <view class="modal-footer">
+        <button class="btn btn-cancel" bindtap="closeDialog">取消</button>
+        <button class="btn btn-confirm" bindtap="confirmSaveCard">保存</button>
       </view>
     </view>
   </view>

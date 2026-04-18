@@ -1,3 +1,5 @@
 {
-  "navigationBarTitleText": "学习"
+  "navigationBarTitleText": "学习",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#f5f5f5"
 }
