@@ -84,7 +84,7 @@ Page({
 
   async saveStudyRecord(duration: number) {
     if (duration < 5) return
-    const { studyRecordCollection, generateId } = require('../../utils/db')
+    const { studyRecordCollection } = require('../../utils/db')
     try {
       await studyRecordCollection.add({
         data: {
@@ -102,7 +102,8 @@ Page({
   prevCard() {
     if (this.data.currentCardIndex > 0) {
       this.setData({
-        currentCardIndex: this.data.currentCardIndex - 1
+        currentCardIndex: this.data.currentCardIndex - 1,
+        isFlipped: false
       })
     }
   },
