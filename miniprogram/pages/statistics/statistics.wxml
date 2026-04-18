@@ -1,20 +1,55 @@
 <view class="container">
-  <view class="stat-card">
-    <text class="stat-label">总学习时长</text>
-    <text class="stat-value">{{totalDuration}}秒</text>
+  <view class="page-header">
+    <text class="page-title">学习统计</text>
   </view>
 
-  <view class="chart-section">
-    <view class="section-title">卡牌组统计</view>
-    <view class="chart-placeholder">
-      图表组件待添加
+  <view class="content-section">
+    <view class="total-card">
+      <view class="card-header">
+        <image class="header-icon" src="/images/status.png" mode="aspectFit"></image>
+        <text class="header-title">总学习时长</text>
+      </view>
+      <view class="card-body">
+        <text class="total-value">{{formattedDuration}}</text>
+      </view>
     </view>
-  </view>
 
-  <view class="chart-section">
-    <view class="section-title">学习趋势</view>
-    <view class="chart-placeholder">
-      图表组件待添加
+    <view class="stats-grid">
+      <view class="stat-item">
+        <view class="stat-icon">📊</view>
+        <view class="stat-value">{{totalDuration}}</view>
+        <view class="stat-label">学习时长(秒)</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-icon">📚</view>
+        <view class="stat-value">{{groupCount}}</view>
+        <view class="stat-label">卡牌组数</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-icon">🎴</view>
+        <view class="stat-value">{{cardCount}}</view>
+        <view class="stat-label">卡牌总数</view>
+      </view>
+    </view>
+
+    <view class="chart-card">
+      <view class="card-title">近期学习趋势</view>
+      <view class="chart-container">
+        <view class="chart-placeholder">
+          <image class="placeholder-icon" src="/images/status.png" mode="aspectFit"></image>
+          <text class="placeholder-text">图表功能开发中</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="chart-card">
+      <view class="card-title">各卡牌组学习时长</view>
+      <view class="chart-container">
+        <view class="chart-placeholder">
+          <image class="placeholder-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
+          <text class="placeholder-text">图表功能开发中</text>
+        </view>
+      </view>
     </view>
   </view>
 </view>

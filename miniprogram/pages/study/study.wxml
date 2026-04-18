@@ -1,19 +1,40 @@
 <view class="container">
-  <view class="header">
-    <text class="title">我的卡牌组</text>
-    <button class="add-btn" bindtap="createCardGroup">+</button>
+  <view class="page-header">
+    <text class="page-title">我的卡牌组</text>
+    <view class="header-action">
+      <button class="create-btn" bindtap="createCardGroup">
+        <text class="create-icon">+</text>
+        <text class="create-text">新建</text>
+      </button>
+    </view>
   </view>
 
-  <view class="card-group-list">
-    <block wx:for="{{cardGroups}}" wx:key="groupId">
-      <view class="card-group-item" bindtap="goToDetail" data-groupid="{{item.groupId}}" data-title="{{item.title}}">
-        <view class="item-title">{{item.title}}</view>
-        <view class="item-desc" wx:if="{{item.description}}">{{item.description}}</view>
-        <view class="item-time">{{item.updateTime}}</view>
+  <view class="content-section">
+    <block wx:if="{{cardGroups.length > 0}}">
+      <view class="card-grid">
+        <block wx:for="{{cardGroups}}" wx:key="groupId">
+          <view class="card-item" bindtap="goToDetail" data-groupid="{{item.groupId}}" data-title="{{item.title}}">
+            <view class="card-icon">
+              <image class="icon-img" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
+            </view>
+            <view class="card-content">
+              <view class="card-title">{{item.title}}</view>
+              <view class="card-desc" wx:if="{{item.description}}">{{item.description}}</view>
+              <view class="card-meta">
+                <text class="meta-item">{{item.createTime}}</text>
+              </view>
+            </view>
+            <view class="card-arrow">›</view>
+          </view>
+        </block>
       </view>
     </block>
-    <view wx:if="{{cardGroups.length === 0}}" class="empty-tip">
-      暂无卡牌组，点击右上角 + 创建
-    </view>
+    <block wx:else>
+      <view class="empty-state">
+        <image class="empty-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
+        <view class="empty-text">暂无卡牌组</view>
+        <view class="empty-desc">点击右上角新建按钮开始创建</view>
+      </view>
+    </block>
   </view>
 </view>

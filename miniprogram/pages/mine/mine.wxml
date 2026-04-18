@@ -1,24 +1,64 @@
 <view class="container">
-  <view class="user-section">
-    <block wx:if="{{userInfo}}">
-      <image class="avatar" src="{{userInfo.avatarUrl}}"></image>
-      <text class="nickname">{{userInfo.nickName}}</text>
-    </block>
-    <block wx:else>
-      <view class="login-tip">点击登录</view>
-      <button wx:if="{{canIUse}}" class="login-btn" bindtap="getUserProfile">获取头像昵称</button>
-    </block>
+  <view class="page-header">
+    <text class="page-title">个人中心</text>
   </view>
 
-  <view class="menu-list">
-    <view class="menu-item">
-      <text class="menu-text">设置</text>
+  <view class="content-section">
+    <view class="user-card">
+      <view class="user-info">
+        <view class="avatar-wrapper">
+          <image class="avatar" src="{{userInfo ? userInfo.avatarUrl : '/images/me.png'}}" mode="aspectFill"></image>
+          <view class="avatar-badge" wx:if="{{userInfo}}"></view>
+        </view>
+        <view class="user-detail">
+          <view class="nickname">{{userInfo ? userInfo.nickName : '点击登录'}}</view>
+          <view class="user-desc" wx:if="{{userInfo}}">欢迎使用 LEmemory</view>
+        </view>
+      </view>
+      <button wx:if="{{!userInfo && canIUse}}" class="login-btn" bindtap="getUserProfile">
+        <text class="btn-icon">👤</text>
+        <text class="btn-text">登录</text>
+      </button>
     </view>
-    <view class="menu-item">
-      <text class="menu-text">关于</text>
+
+    <view class="menu-section">
+      <view class="menu-title">功能设置</view>
+      <view class="menu-list">
+        <view class="menu-item">
+          <view class="item-left">
+            <view class="menu-icon">⚙️</view>
+            <text class="menu-text">设置</text>
+          </view>
+          <view class="item-arrow">›</view>
+        </view>
+        <view class="menu-item">
+          <view class="item-left">
+            <view class="menu-icon">ℹ️</view>
+            <text class="menu-text">关于</text>
+          </view>
+          <view class="item-arrow">›</view>
+        </view>
+        <view class="menu-item">
+          <view class="item-left">
+            <view class="menu-icon">💬</view>
+            <text class="menu-text">反馈</text>
+          </view>
+          <view class="item-arrow">›</view>
+        </view>
+      </view>
     </view>
-    <view class="menu-item">
-      <text class="menu-text">反馈</text>
+
+    <view class="menu-section">
+      <view class="menu-title">其他</view>
+      <view class="menu-list">
+        <view class="menu-item">
+          <view class="item-left">
+            <view class="menu-icon">❤️</view>
+            <text class="menu-text">支持我们</text>
+          </view>
+          <view class="item-arrow">›</view>
+        </view>
+      </view>
     </view>
   </view>
 </view>

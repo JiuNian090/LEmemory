@@ -9,6 +9,7 @@ Page({
     cards: [],
     favorites: [],
     currentCardIndex: 0,
+    isFlipped: false,
     studyStartTime: null,
     timer: null
   },
@@ -109,9 +110,16 @@ Page({
   nextCard() {
     if (this.data.currentCardIndex < this.data.cards.length - 1) {
       this.setData({
-        currentCardIndex: this.data.currentCardIndex + 1
+        currentCardIndex: this.data.currentCardIndex + 1,
+        isFlipped: false
       })
     }
+  },
+
+  flipCard() {
+    this.setData({
+      isFlipped: !this.data.isFlipped
+    })
   },
 
   async addCard() {
