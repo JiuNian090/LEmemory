@@ -210,17 +210,16 @@ page {
 .input-wrapper {
   display: flex;
   align-items: center;
-  background: #f8f8f8;
+  background: #ffffff;
   border-radius: 24rpx;
   padding: 0 30rpx;
   height: 100rpx;
   position: relative;
-  border: 2rpx solid transparent;
+  border: 2rpx solid #e0e0e0;
   transition: all 0.3s ease;
 }
 
 .input-wrapper:focus-within {
-  background: #fff;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 4rpx rgba(52, 211, 153, 0.15);
 }
