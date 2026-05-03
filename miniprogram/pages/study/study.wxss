@@ -1,6 +1,85 @@
 .content-section {
   padding: 0;
-  padding-bottom: 160rpx;
+  padding-bottom: 40rpx;
+}
+
+/* ========== 区块卡片 ========== */
+.section {
+  background: var(--card-bg);
+  border-radius: 24rpx;
+  margin: 0 30rpx 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transform: translateY(0);
+  opacity: 1;
+  transition: all 0.3s ease;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  padding: 30rpx;
+  position: relative;
+  justify-content: space-between;
+}
+
+.section-icon {
+  width: 48rpx;
+  height: 48rpx;
+  font-size: 36rpx;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16rpx;
+}
+
+.data-icon {
+  background: linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%);
+}
+
+.section-title {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.section-right {
+  display: flex;
+  align-items: center;
+}
+
+.add-btn {
+  padding: 10rpx 8rpx;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  margin: 0;
+  line-height: 1;
+  box-shadow: 0 4rpx 12rpx rgba(52, 211, 153, 0.3);
+}
+
+.add-btn::after {
+  border: none;
+}
+
+.add-icon {
+  font-size: 32rpx;
+  color: #ffffff;
+  font-weight: 300;
+  line-height: 1;
+  margin-right: 8rpx;
+}
+
+.add-text {
+  font-size: 28rpx;
+  color: #ffffff;
+  font-weight: 500;
+  line-height: 1;
 }
 
 .card-grid {
@@ -137,43 +216,7 @@
   color: var(--text-tertiary);
 }
 
-.fixed-action-btn {
-  position: fixed;
-  bottom: 40rpx;
-  left: 30rpx;
-  right: 30rpx;
-  z-index: 100;
-}
 
-.create-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-  border-radius: 44rpx;
-  padding: 24rpx 32rpx;
-  border: none;
-  color: #ffffff;
-  font-size: 28rpx;
-  line-height: 1;
-  box-shadow: 0 4rpx 20rpx rgba(52, 211, 153, 0.4);
-  width: 100%;
-}
-
-.create-btn::after {
-  border: none;
-}
-
-.create-icon {
-  font-size: 36rpx;
-  margin-right: 8rpx;
-  font-weight: 300;
-}
-
-.create-text {
-  font-size: 28rpx;
-  font-weight: 500;
-}
 
 .modal-overlay {
   position: fixed;

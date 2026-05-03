@@ -6,6 +6,21 @@
     </view>
   </view>
 
+  <view class="section">
+    <view class="section-header">
+      <view class="section-icon data-icon">
+        <text class="icon-text">🎴</text>
+      </view>
+      <text class="section-title">卡牌组</text>
+      <view class="section-right">
+        <button class="add-btn" bindtap="createCardGroup" style="width: 154rpx; display: flex; box-sizing: border-box; left: 0rpx; top: 0rpx; height: 58rpx">
+          <text class="add-icon">+</text>
+          <text class="add-text">新建</text>
+        </button>
+      </view>
+    </view>
+  </view>
+
   <view class="content-section">
     <block wx:if="{{cardGroups.length > 0}}">
       <view class="card-grid" bindtap="closeAllSwipes">
@@ -43,16 +58,9 @@
       <view class="empty-state">
         <image class="empty-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
         <view class="empty-text">暂无卡牌组</view>
-        <view class="empty-desc">点击下方按钮开始创建</view>
+        <view class="empty-desc">点击上方按钮开始创建</view>
       </view>
     </block>
-  </view>
-
-  <view class="fixed-action-btn">
-    <button class="create-btn" bindtap="createCardGroup">
-      <text class="create-icon">+</text>
-      <text class="create-text">新建卡牌组</text>
-    </button>
   </view>
 
   <!-- 创建卡牌组弹窗 -->
