@@ -654,7 +654,8 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
           }
         })
 
-        const newFavoriteCardIds = [...new Set(this.data.favoriteCardIds), cardid]
+        const newFavoriteCardIds = new Set(this.data.favoriteCardIds)
+        newFavoriteCardIds.add(cardid)
         
         this.setData({
           favoriteCardIds: newFavoriteCardIds
