@@ -123,11 +123,11 @@
 }
 
 .stat-value.today {
-  color: var(--primary-color);
+  color: var(--warning-color);
 }
 
 .stat-value.review {
-  color: var(--warning-color);
+  color: var(--primary-color);
 }
 
 .stat-value.time {

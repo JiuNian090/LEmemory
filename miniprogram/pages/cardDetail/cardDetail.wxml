@@ -32,12 +32,12 @@
           </view>
           <view class="stat-divider"></view>
           <view class="stat-item">
-            <view class="stat-value review">{{todayStats.toReview}}</view>
-            <view class="stat-label">今日待复习</view>
+            <view class="stat-value review">{{studiedCards}}</view>
+            <view class="stat-label">今日已学</view>
           </view>
           <view class="stat-divider"></view>
           <view class="stat-item">
-            <view class="stat-value time">{{formatTime(todayStats.studiedTime)}}</view>
+            <view class="stat-value time">{{formattedStudiedTime}}</view>
             <view class="stat-label">今日已学时长</view>
           </view>
         </view>
@@ -47,7 +47,6 @@
           <text class="btn-icon">▶️</text>
           <text class="btn-text">开始学习</text>
         </view>
-        <view class="study-hint">预计用时: {{totalCards > 0 ? Math.ceil(totalCards * 2) : 0}}分钟</view>
 
         <!-- 快捷功能按钮 -->
         <view class="quick-actions">

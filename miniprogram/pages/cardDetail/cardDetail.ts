@@ -48,20 +48,21 @@ interface CardDetailPageData {
   editCardId: string
   newFront: string
   newBack: string
-  favoriteCardIds: Set<string>
+  favoriteCardIds: string[]
   isStudying: boolean
   todayStats: {
     toLearn: number
     toReview: number
     studiedTime: number
   }
+  formattedStudiedTime: string
   masteryData: MasteryData
   totalCards: number
   studiedCards: number
   donutGradient: string
 }
 
-Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>({
+Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   data: {
     groupId: '',
     title: '',
@@ -79,13 +80,14 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
     editCardId: '',
     newFront: '',
     newBack: '',
-    favoriteCardIds: new Set(),
+    favoriteCardIds: [],
     isStudying: false,
     todayStats: {
       toLearn: 0,
       toReview: 0,
       studiedTime: 0
     },
+    formattedStudiedTime: '0秒',
     masteryData: {
       notStarted: 0,
       basic: 0,
@@ -108,14 +110,25 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
     })
     this.loadCards()
     this.loadFavorites()
+
+    if (options.studying === '1') {
+      this.setData({ isStudying: true })
+    }
   },
 
   onShow() {
-    this.startStudyTimer()
+    if (this.data.isStudying) {
+      this.startStudyTimer()
+    } else {
+      this.loadCards()
+      this.loadFavorites()
+    }
   },
 
   onHide() {
-    this.stopStudyTimer()
+    if (this.data.isStudying) {
+      this.stopStudyTimer()
+    }
   },
 
   /**
@@ -138,6 +151,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
         totalCards: cards.length
       })
       this.calculateStats()
+      await this.loadTodayStudyTime()
       console.log('[CardDetail] 加载卡牌成功', cards.length)
     } catch (err) {
       console.error('[CardDetail] 加载卡牌失败', err)
@@ -158,7 +172,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
       }).get()
 
       const favorites = data as FavoriteItem[]
-      const favoriteCardIds = new Set(favorites.map(f => f.cardId))
+      const favoriteCardIds = favorites.map(f => f.cardId)
 
       const cardsMap = new Map(this.data.cards.map(c => [c.cardId, c]))
       const favoritesWithCards = favorites.map(f => ({
@@ -221,12 +235,41 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
       masteryData,
       studiedCards,
       donutGradient,
+      formattedStudiedTime: this.formatTime(this.data.todayStats.studiedTime),
       todayStats: {
         toLearn: cards.length > 0 ? Math.min(10, cards.length) : 0,
         toReview: cards.length > 0 ? Math.min(5, cards.length) : 0,
-        studiedTime: 0
+        studiedTime: this.data.todayStats.studiedTime
       }
     })
+  },
+
+  async loadTodayStudyTime() {
+    try {
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+
+      const { data } = await studyRecordCollection.where({
+        groupId: this.data.groupId
+      }).get()
+
+      const studiedTime = (data as any[]).reduce((sum, r) => {
+        const recordDate = new Date(r.studyDate)
+        if (recordDate >= todayStart) {
+          return sum + (r.studyDuration || 0)
+        }
+        return sum
+      }, 0)
+
+      this.setData({
+        'todayStats.studiedTime': studiedTime,
+        formattedStudiedTime: this.formatTime(studiedTime)
+      })
+
+      console.log('[CardDetail] 今日学习时长', studiedTime, '秒')
+    } catch (err) {
+      console.error('[CardDetail] 加载今日学习时长失败', err)
+    }
   },
 
   /**
@@ -253,21 +296,8 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
       })
       return
     }
-    this.setData({
-      isStudying: true
-    })
-  },
-
-  /**
-   * 结束学习
-   */
-  stopStudy() {
-    this.setData({
-      isStudying: false,
-      isFlipped: false,
-      currentCardIndex: 0,
-      cardAnim: ''
-    })
+    const url = `/pages/cardDetail/cardDetail?groupId=${this.data.groupId}&title=${encodeURIComponent(this.data.title)}&description=${encodeURIComponent(this.data.description)}&studying=1`
+    wx.navigateTo({ url })
   },
 
   /**
@@ -595,7 +625,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
    */
   async toggleFavorite(e: WechatMiniprogram.TouchEvent) {
     const { cardid } = e.currentTarget.dataset
-    const isFavorited = this.data.favoriteCardIds.has(cardid)
+    const isFavorited = this.data.favoriteCardIds.includes(cardid)
 
     try {
       if (isFavorited) {
@@ -604,8 +634,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
           await favoriteCollection.doc(favorite._id).remove()
         }
         
-        const newFavoriteCardIds = new Set(this.data.favoriteCardIds)
-        newFavoriteCardIds.delete(cardid)
+        const newFavoriteCardIds = this.data.favoriteCardIds.filter(id => id !== cardid)
         
         this.setData({
           favoriteCardIds: newFavoriteCardIds
@@ -625,8 +654,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
           }
         })
 
-        const newFavoriteCardIds = new Set(this.data.favoriteCardIds)
-        newFavoriteCardIds.add(cardid)
+        const newFavoriteCardIds = [...new Set(this.data.favoriteCardIds), cardid]
         
         this.setData({
           favoriteCardIds: newFavoriteCardIds
@@ -712,13 +740,14 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
       encoding: 'utf8',
       success: () => {
         console.log('[CardDetail] 临时文件写入成功', tmpPath)
+        // @ts-ignore shareFileMessage 类型声明缺失
         wx.shareFileMessage({
           filePath: tmpPath,
           fileName,
           success: () => {
             console.log('[CardDetail] 分享卡牌组成功')
           },
-          fail: (err) => {
+          fail: (err: WechatMiniprogram.GeneralCallbackResult) => {
             console.error('[CardDetail] 分享文件失败', err)
             wx.showToast({
               title: '分享失败',
@@ -727,7 +756,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
           }
         })
       },
-      fail: (err) => {
+      fail: (err: WechatMiniprogram.GeneralCallbackResult) => {
         console.error('[CardDetail] 写入文件失败', err)
         wx.showToast({
           title: '分享失败',
