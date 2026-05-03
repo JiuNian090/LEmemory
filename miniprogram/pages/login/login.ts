@@ -387,12 +387,7 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
     })
   },
 
-  /**
-   * 返回
-   */
-  goBack() {
-    wx.navigateBack()
-  },
+
 
   /**
    * 跳转到备份页面

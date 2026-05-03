@@ -1,10 +1,4 @@
 <view class="container">
-  <view class="header">
-    <view class="back-btn" bindtap="goBack">
-      <text class="back-icon">‹</text>
-    </view>
-  </view>
-
   <view class="form-container">
     <!-- 已登录状态 -->
     <view wx:if="{{userInfo}}">
@@ -57,9 +51,9 @@
       <view class="form-group">
         <view class="input-wrapper">
           <text class="input-icon">👤</text>
-          <input 
-            class="form-input" 
-            placeholder="请输入用户名" 
+          <input
+            class="form-input"
+            placeholder="请输入用户名"
             value="{{loginForm.username}}"
             bindinput="onLoginInput"
             data-field="username"
@@ -71,9 +65,9 @@
       <view class="form-group">
         <view class="input-wrapper">
           <text class="input-icon">🔒</text>
-          <input 
-            class="form-input" 
-            placeholder="请输入密码" 
+          <input
+            class="form-input"
+            placeholder="请输入密码"
             password="{{!showPassword}}"
             value="{{loginForm.password}}"
             bindinput="onLoginInput"
@@ -88,7 +82,7 @@
 
       <view class="form-options">
         <view class="remember-password">
-          <checkbox 
+          <checkbox
             checked="{{loginForm.rememberPassword}}"
             bindchange="onRememberPasswordChange"
             color="#34d399"
@@ -97,9 +91,9 @@
         </view>
       </view>
 
-      <button 
-        class="submit-btn" 
-        bindtap="handleLogin" 
+      <button
+        class="submit-btn"
+        bindtap="handleLogin"
         loading="{{loading}}"
         disabled="{{loading}}"
       >
@@ -119,9 +113,9 @@
       <view class="form-group">
         <view class="input-wrapper">
           <text class="input-icon">👤</text>
-          <input 
-            class="form-input" 
-            placeholder="请输入用户名（3-20个字符）" 
+          <input
+            class="form-input"
+            placeholder="请输入用户名（3-20个字符）"
             value="{{registerForm.username}}"
             bindinput="onRegisterInput"
             data-field="username"
@@ -133,9 +127,9 @@
       <view class="form-group">
         <view class="input-wrapper">
           <text class="input-icon">🔒</text>
-          <input 
-            class="form-input" 
-            placeholder="请输入密码（至少6个字符）" 
+          <input
+            class="form-input"
+            placeholder="请输入密码（至少6个字符）"
             password="{{!showPassword}}"
             value="{{registerForm.password}}"
             bindinput="onRegisterInput"
@@ -151,9 +145,9 @@
       <view class="form-group">
         <view class="input-wrapper">
           <text class="input-icon">✅</text>
-          <input 
-            class="form-input" 
-            placeholder="请再次输入密码" 
+          <input
+            class="form-input"
+            placeholder="请再次输入密码"
             password="{{!showPassword}}"
             value="{{registerForm.confirmPassword}}"
             bindinput="onRegisterInput"
@@ -166,9 +160,9 @@
       <view class="form-group">
         <view class="input-wrapper">
           <text class="input-icon">😊</text>
-          <input 
-            class="form-input" 
-            placeholder="请输入昵称（可选）" 
+          <input
+            class="form-input"
+            placeholder="请输入昵称（可选）"
             value="{{registerForm.nickName}}"
             bindinput="onRegisterInput"
             data-field="nickName"
@@ -182,10 +176,10 @@
           <text class="input-icon">📷</text>
           <view class="avatar-input-label">点击选择头像（可选）</view>
           <view class="avatar-preview">
-            <image 
-              wx:if="{{registerForm.avatarUrl}}" 
-              class="preview-avatar" 
-              src="{{registerForm.avatarUrl}}" 
+            <image
+              wx:if="{{registerForm.avatarUrl}}"
+              class="preview-avatar"
+              src="{{registerForm.avatarUrl}}"
               mode="aspectFill"
             />
             <view wx:else class="avatar-preview-icon">
@@ -195,9 +189,9 @@
         </view>
       </view>
 
-      <button 
-        class="submit-btn" 
-        bindtap="handleRegister" 
+      <button
+        class="submit-btn"
+        bindtap="handleRegister"
         loading="{{loading}}"
         disabled="{{loading}}"
       >

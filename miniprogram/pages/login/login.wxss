@@ -20,28 +20,6 @@ page {
   padding: 40rpx 0;
 }
 
-.header {
-  padding: 40rpx 30rpx;
-  display: flex;
-  align-items: center;
-}
-
-.back-btn {
-  width: 80rpx;
-  height: 80rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-}
-
-.back-icon {
-  font-size: 48rpx;
-  color: #333;
-  font-weight: 300;
-}
-
 /* 通用卡片样式 */
 .section {
   background: var(--card-bg);
