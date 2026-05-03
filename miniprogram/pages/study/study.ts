@@ -20,7 +20,7 @@ interface StudyPageData {
   newDesc: string
 }
 
-Page<StudyPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>({
+Page<StudyPageData, WechatMiniprogram.IAnyObject>({
   data: {
     cardGroups: [],
     isRefreshing: false,

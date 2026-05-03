@@ -658,7 +658,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
         newFavoriteCardIds.add(cardid)
         
         this.setData({
-          favoriteCardIds: newFavoriteCardIds
+          favoriteCardIds: Array.from(newFavoriteCardIds)
         })
 
         wx.showToast({

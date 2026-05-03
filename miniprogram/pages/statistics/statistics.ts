@@ -23,7 +23,7 @@ interface StatisticsPageData {
   maxGroupDuration: number
 }
 
-Page<StatisticsPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>({
+Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
   data: {
     totalDuration: 0,
     formattedDuration: '0秒',
