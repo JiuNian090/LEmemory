@@ -133,6 +133,24 @@
             下一张 ›
           </button>
         </view>
+        <view class="mastery-buttons" wx:if="{{isFlipped}}">
+          <view class="mastery-btn mastery-btn-new {{cards[currentCardIndex].status === 'new' ? 'active' : ''}}" bindtap="setMastery" data-status="new">
+            <text class="mastery-btn-icon">😶</text>
+            <text class="mastery-btn-label">未掌握</text>
+          </view>
+          <view class="mastery-btn mastery-btn-learning {{cards[currentCardIndex].status === 'learning' ? 'active' : ''}}" bindtap="setMastery" data-status="learning">
+            <text class="mastery-btn-icon">🤔</text>
+            <text class="mastery-btn-label">基本掌握</text>
+          </view>
+          <view class="mastery-btn mastery-btn-mastered {{cards[currentCardIndex].status === 'mastered' ? 'active' : ''}}" bindtap="setMastery" data-status="mastered">
+            <text class="mastery-btn-icon">😊</text>
+            <text class="mastery-btn-label">良好掌握</text>
+          </view>
+          <view class="mastery-btn mastery-btn-difficult {{cards[currentCardIndex].status === 'difficult' ? 'active' : ''}}" bindtap="setMastery" data-status="difficult">
+            <text class="mastery-btn-icon">😰</text>
+            <text class="mastery-btn-label">疑难</text>
+          </view>
+        </view>
       </view>
 
       <view wx:if="{{!isStudying && cards.length === 0}}" class="empty-state">

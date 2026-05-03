@@ -339,6 +339,41 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
   },
 
   /**
+   * 设置掌握程度
+   */
+  async setMastery(e: WechatMiniprogram.TouchEvent) {
+    const status = e.currentTarget.dataset.status as CardItem['status']
+    const card = this.data.cards[this.data.currentCardIndex]
+    if (!card || !card._id) return
+
+    try {
+      await cardCollection.doc(card._id).update({
+        data: {
+          status: status,
+          reviewCount: (card.reviewCount || 0) + 1
+        }
+      })
+
+      const key = `cards[${this.data.currentCardIndex}].status`
+      const reviewKey = `cards[${this.data.currentCardIndex}].reviewCount`
+      this.setData({
+        [key]: status,
+        [reviewKey]: (card.reviewCount || 0) + 1
+      })
+
+      this.calculateStats()
+
+      console.log('[CardDetail] 更新掌握程度', card.cardId, status)
+    } catch (err) {
+      console.error('[CardDetail] 更新掌握程度失败', err)
+      wx.showToast({
+        title: '记录失败',
+        icon: 'none'
+      })
+    }
+  },
+
+  /**
    * 显示添加卡牌弹窗
    */
   showAddCardDialog() {

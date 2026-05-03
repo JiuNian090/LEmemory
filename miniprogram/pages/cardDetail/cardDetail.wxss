@@ -362,6 +362,115 @@
   border: 2rpx solid var(--primary-color);
 }
 
+.mastery-buttons {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 30rpx;
+  width: 100%;
+}
+
+.mastery-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  padding: 24rpx 8rpx;
+  border-radius: 16rpx;
+  border: 2rpx solid transparent;
+  transition: all 0.2s ease;
+}
+
+.mastery-btn:active {
+  transform: scale(0.95);
+}
+
+.mastery-btn-icon {
+  font-size: 36rpx;
+}
+
+.mastery-btn-label {
+  font-size: 22rpx;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.mastery-btn-new {
+  background: rgba(156, 163, 175, 0.1);
+  border-color: rgba(156, 163, 175, 0.3);
+}
+
+.mastery-btn-new .mastery-btn-label {
+  color: #9ca3af;
+}
+
+.mastery-btn-new.active {
+  background: rgba(156, 163, 175, 0.25);
+  border-color: #9ca3af;
+}
+
+.mastery-btn-new.active .mastery-btn-label {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.mastery-btn-learning {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.mastery-btn-learning .mastery-btn-label {
+  color: #d97706;
+}
+
+.mastery-btn-learning.active {
+  background: rgba(251, 191, 36, 0.25);
+  border-color: #fbbf24;
+}
+
+.mastery-btn-learning.active .mastery-btn-label {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.mastery-btn-mastered {
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.mastery-btn-mastered .mastery-btn-label {
+  color: var(--primary-dark);
+}
+
+.mastery-btn-mastered.active {
+  background: rgba(52, 211, 153, 0.25);
+  border-color: var(--primary-color);
+}
+
+.mastery-btn-mastered.active .mastery-btn-label {
+  color: #047857;
+  font-weight: 600;
+}
+
+.mastery-btn-difficult {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.mastery-btn-difficult .mastery-btn-label {
+  color: #f87171;
+}
+
+.mastery-btn-difficult.active {
+  background: rgba(248, 113, 113, 0.25);
+  border-color: var(--danger-color);
+}
+
+.mastery-btn-difficult.active .mastery-btn-label {
+  color: #dc2626;
+  font-weight: 600;
+}
+
 .card-label {
   font-size: 24rpx;
   color: var(--text-tertiary);
