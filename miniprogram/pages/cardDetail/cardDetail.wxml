@@ -51,15 +51,15 @@
 
         <!-- 快捷功能按钮 -->
         <view class="quick-actions">
-          <view class="quick-action-btn">
-            <text class="action-icon">🎧</text>
-            <text class="action-text">听卡牌</text>
+          <view class="quick-action-btn" bindtap="shareCardGroup">
+            <text class="action-icon">📤</text>
+            <text class="action-text">分享卡牌组</text>
           </view>
-          <view class="quick-action-btn">
-            <text class="action-icon">📖</text>
-            <text class="action-text">浏览</text>
+          <view class="quick-action-btn" bindtap="importCards">
+            <text class="action-icon">📥</text>
+            <text class="action-text">导入卡牌</text>
           </view>
-          <view class="quick-action-btn">
+          <view class="quick-action-btn" bindtap="startStudy">
             <text class="action-icon">📝</text>
             <text class="action-text">测验</text>
           </view>

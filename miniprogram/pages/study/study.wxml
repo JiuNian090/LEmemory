@@ -8,20 +8,33 @@
 
   <view class="content-section">
     <block wx:if="{{cardGroups.length > 0}}">
-      <view class="card-grid">
+      <view class="card-grid" bindtap="closeAllSwipes">
         <block wx:for="{{cardGroups}}" wx:key="groupId">
-          <view class="card-item" bindtap="goToDetail" data-groupid="{{item.groupId}}" data-title="{{item.title}}">
-            <view class="card-icon">
-              <text class="icon-text">🎴</text>
+          <view class="swipe-container">
+            <view class="swipe-bg" bindtap="onDeleteGroup" data-groupid="{{item.groupId}}" data-title="{{item.title}}">
+              <text>删除</text>
             </view>
-            <view class="card-content">
-              <view class="card-title">{{item.title}}</view>
-              <view class="card-desc" wx:if="{{item.description}}">{{item.description}}</view>
-              <view class="card-meta">
-                <text class="meta-item">{{item.updateTime}}</text>
+            <view class="card-item {{item._swipeOpen ? 'swiped' : ''}}" 
+              bindtap="goToDetail" 
+              bindlongpress="onLongPressDelete"
+              bindtouchstart="onTouchStart"
+              bindtouchmove="onTouchMove"
+              bindtouchend="onTouchEnd"
+              data-index="{{index}}"
+              data-groupid="{{item.groupId}}" 
+              data-title="{{item.title}}">
+              <view class="card-icon">
+                <text class="icon-text">🎴</text>
               </view>
+              <view class="card-content">
+                <view class="card-title">{{item.title}}</view>
+                <view class="card-desc" wx:if="{{item.description}}">{{item.description}}</view>
+                <view class="card-meta">
+                  <text class="meta-item">{{item.updateTime}}</text>
+                </view>
+              </view>
+              <view class="card-arrow">›</view>
             </view>
-            <view class="card-arrow">›</view>
           </view>
         </block>
       </view>

@@ -616,5 +616,186 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
    */
   stopPropagation() {
     // 防止点击弹窗内容时关闭弹窗
+  },
+
+  shareCardGroup() {
+    const { title, description, groupId, cards } = this.data
+
+    if (cards.length === 0) {
+      wx.showToast({
+        title: '暂无卡牌可分享',
+        icon: 'none'
+      })
+      return
+    }
+
+    const exportData = {
+      version: '1.0',
+      group: {
+        groupId,
+        title,
+        description
+      },
+      cards: cards.map(c => ({
+        front: c.front,
+        back: c.back,
+        status: c.status || 'new',
+        reviewCount: c.reviewCount || 0
+      })),
+      exportTime: new Date().toISOString()
+    }
+
+    const jsonStr = JSON.stringify(exportData, null, 2)
+    const fileName = `${title || '卡牌组'}.json`
+    const fs = wx.getFileSystemManager()
+    const tmpPath = `${wx.env.USER_DATA_PATH}/${fileName}`
+
+    fs.writeFile({
+      filePath: tmpPath,
+      data: jsonStr,
+      encoding: 'utf8',
+      success: () => {
+        console.log('[CardDetail] 临时文件写入成功', tmpPath)
+        wx.shareFileMessage({
+          filePath: tmpPath,
+          fileName,
+          success: () => {
+            console.log('[CardDetail] 分享卡牌组成功')
+          },
+          fail: (err) => {
+            console.error('[CardDetail] 分享文件失败', err)
+            wx.showToast({
+              title: '分享失败',
+              icon: 'none'
+            })
+          }
+        })
+      },
+      fail: (err) => {
+        console.error('[CardDetail] 写入文件失败', err)
+        wx.showToast({
+          title: '分享失败',
+          icon: 'none'
+        })
+      }
+    })
+  },
+
+  importCards() {
+    wx.chooseMessageFile({
+      count: 1,
+      type: 'file',
+      success: (res) => {
+        const file = res.tempFiles[0]
+        const fs = wx.getFileSystemManager()
+
+        fs.readFile({
+          filePath: file.path,
+          encoding: 'utf8',
+          success: (readRes) => {
+            this.processImportData(readRes.data as string)
+          },
+          fail: (err) => {
+            console.error('[CardDetail] 读取文件失败', err)
+            wx.showToast({
+              title: '读取文件失败',
+              icon: 'none'
+            })
+          }
+        })
+      },
+      fail: (err) => {
+        if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+          console.error('[CardDetail] 选择文件失败', err)
+        }
+      }
+    })
+  },
+
+  processImportData(rawData: string) {
+    try {
+      let cardsToImport: { front: string; back: string }[] = []
+
+      const parsed = JSON.parse(rawData)
+
+      if (Array.isArray(parsed)) {
+        cardsToImport = parsed
+      } else if (parsed.cards && Array.isArray(parsed.cards)) {
+        cardsToImport = parsed.cards
+      } else {
+        wx.showToast({
+          title: '无效的卡牌数据',
+          icon: 'none'
+        })
+        return
+      }
+
+      const validCards = cardsToImport.filter(
+        c => c.front && c.back
+      )
+
+      if (validCards.length === 0) {
+        wx.showToast({
+          title: '没有有效卡牌',
+          icon: 'none'
+        })
+        return
+      }
+
+      wx.showModal({
+        title: '导入卡牌',
+        content: `发现 ${validCards.length} 张卡牌，确认导入到当前卡牌组？`,
+        confirmColor: '#34d399',
+        success: (modalRes) => {
+          if (modalRes.confirm) {
+            this.doImportCards(validCards)
+          }
+        }
+      })
+    } catch (err) {
+      console.error('[CardDetail] JSON 解析失败', err)
+      wx.showToast({
+        title: '文件格式错误',
+        icon: 'none'
+      })
+    }
+  },
+
+  async doImportCards(cardsToImport: { front: string; back: string }[]) {
+    try {
+      wx.showLoading({ title: '导入中...' })
+
+      for (const card of cardsToImport) {
+        await cardCollection.add({
+          data: {
+            cardId: generateId(),
+            groupId: this.data.groupId,
+            front: card.front.trim(),
+            back: card.back.trim(),
+            createTime: new Date(),
+            status: 'new',
+            reviewCount: 0
+          }
+        })
+      }
+
+      wx.showToast({
+        title: `已导入${cardsToImport.length}张`,
+        icon: 'success'
+      })
+
+      this.loadCards()
+      this.calculateStats()
+
+      console.log('[CardDetail] 导入卡牌完成', cardsToImport.length)
+    } catch (err) {
+      console.error('[CardDetail] 导入卡牌失败', err)
+      wx.showToast({
+        title: '导入失败',
+        icon: 'none'
+      })
+    } finally {
+      wx.hideLoading()
+    }
   }
 })
