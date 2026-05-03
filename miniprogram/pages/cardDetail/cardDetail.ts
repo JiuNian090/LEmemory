@@ -1,4 +1,4 @@
-import { cardCollection, favoriteCollection, studyRecordCollection, generateId } from '../../utils/db'
+import { cardCollection, cardGroupCollection, favoriteCollection, studyRecordCollection, generateId } from '../../utils/db'
 
 interface CardItem {
   _id?: string
@@ -701,6 +701,80 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
    */
   stopPropagation() {
     // 防止点击弹窗内容时关闭弹窗
+  },
+
+  deleteCardGroup() {
+    wx.showModal({
+      title: '删除卡牌组',
+      content: `确定要删除「${this.data.title}」吗？组内所有卡牌和收藏也会被删除，且无法恢复。`,
+      confirmColor: '#ff4d4f',
+      success: (res) => {
+        if (res.confirm) {
+          this.doDeleteCardGroup()
+        }
+      }
+    })
+  },
+
+  async doDeleteCardGroup() {
+    try {
+      wx.showLoading({ title: '删除中...' })
+
+      const cardRes = await cardCollection.where({
+        groupId: this.data.groupId
+      }).get()
+      for (const card of cardRes.data as any[]) {
+        if (card._id) {
+          await cardCollection.doc(card._id).remove()
+        }
+      }
+
+      const favRes = await favoriteCollection.where({
+        groupId: this.data.groupId
+      }).get()
+      for (const fav of favRes.data as any[]) {
+        if (fav._id) {
+          await favoriteCollection.doc(fav._id).remove()
+        }
+      }
+
+      const studyRes = await studyRecordCollection.where({
+        groupId: this.data.groupId
+      }).get()
+      for (const record of studyRes.data as any[]) {
+        if (record._id) {
+          await studyRecordCollection.doc(record._id).remove()
+        }
+      }
+
+      const groupRes = await cardGroupCollection.where({
+        groupId: this.data.groupId
+      }).get()
+      for (const group of groupRes.data as any[]) {
+        if (group._id) {
+          await cardGroupCollection.doc(group._id).remove()
+        }
+      }
+
+      wx.showToast({
+        title: '删除成功',
+        icon: 'success'
+      })
+
+      console.log('[CardDetail] 删除卡牌组成功', this.data.groupId)
+
+      setTimeout(() => {
+        wx.navigateBack()
+      }, 1000)
+    } catch (err) {
+      console.error('[CardDetail] 删除卡牌组失败', err)
+      wx.showToast({
+        title: '删除失败',
+        icon: 'none'
+      })
+    } finally {
+      wx.hideLoading()
+    }
   },
 
   shareCardGroup() {

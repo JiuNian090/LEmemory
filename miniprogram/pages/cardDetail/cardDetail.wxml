@@ -98,6 +98,11 @@
             </view>
           </view>
         </view>
+
+        <view class="delete-group-btn" bindtap="deleteCardGroup">
+          <text class="delete-icon">🗑️</text>
+          <text class="delete-text">删除卡牌组</text>
+        </view>
       </view>
 
       <!-- 学习模式 -->

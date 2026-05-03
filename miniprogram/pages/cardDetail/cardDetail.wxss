@@ -323,6 +323,32 @@
   color: var(--text-primary);
 }
 
+.delete-group-btn {
+  background: var(--card-bg);
+  border: 2rpx solid rgba(248, 113, 113, 0.3);
+  border-radius: 20rpx;
+  padding: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  box-shadow: var(--shadow);
+}
+
+.delete-group-btn:active {
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.delete-icon {
+  font-size: 32rpx;
+}
+
+.delete-text {
+  font-size: 26rpx;
+  color: #f87171;
+  font-weight: 500;
+}
+
 .study-mode {
   display: flex;
   flex-direction: column;
