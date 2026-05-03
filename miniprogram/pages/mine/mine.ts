@@ -43,9 +43,15 @@ Page<MinePageData, WechatMiniprogram.IAnyObject>({
    * 处理头部点击
    */
   handleHeaderClick() {
-    wx.navigateTo({
-      url: '/pages/login/login'
-    })
+    if (this.data.userInfo) {
+      wx.navigateTo({
+        url: '/pages/settings/settings'
+      })
+    } else {
+      wx.navigateTo({
+        url: '/pages/login/login'
+      })
+    }
   },
 
   /**
@@ -86,6 +92,12 @@ Page<MinePageData, WechatMiniprogram.IAnyObject>({
   goToBackup() {
     wx.navigateTo({
       url: '/pages/backup/backup'
+    })
+  },
+
+  goToSettings() {
+    wx.navigateTo({
+      url: '/pages/settings/settings'
     })
   }
 })

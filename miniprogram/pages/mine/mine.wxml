@@ -7,8 +7,9 @@
         </view>
         <view class="user-info">
           <view class="nickname">{{userInfo ? (userInfo.nickName || userInfo.username) : '点击登录'}}</view>
+          <view class="user-hint" wx:if="{{userInfo}}">设置 ›</view>
         </view>
-        <view class="arrow-wrapper">
+        <view class="arrow-wrapper" wx:if="{{!userInfo}}">
           <text class="arrow">›</text>
         </view>
       </view>
@@ -32,7 +33,7 @@
             </view>
             <view class="item-arrow">›</view>
           </view>
-          <view class="menu-item">
+          <view class="menu-item" bindtap="goToSettings">
             <view class="item-left">
               <text class="menu-icon">⚙️</text>
               <text class="menu-text">设置</text>

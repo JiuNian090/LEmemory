@@ -18,7 +18,7 @@ function verifyPassword(password, hash, salt) {
 }
 
 exports.main = async (event, context) => {
-  const { action, username, password, nickName, avatarUrl, rememberPassword } = event
+  const { action, username, password, nickName, avatarUrl, rememberPassword, oldPassword, newPassword } = event
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
 
@@ -132,6 +132,65 @@ exports.main = async (event, context) => {
           lastLoginTime: user.lastLoginTime
         }
       }
+    } else if (action === 'updateProfile') {
+      const { data: users } = await db.collection('users').where({
+        _openid: openid
+      }).get()
+
+      if (users.length === 0) {
+        return { success: false, error: '用户不存在' }
+      }
+
+      const user = users[0]
+      const updateData = {}
+      if (nickName !== undefined) updateData.nickName = nickName
+      if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl
+
+      if (Object.keys(updateData).length === 0) {
+        return { success: false, error: '没有需要更新的内容' }
+      }
+
+      await db.collection('users').doc(user._id).update({ data: updateData })
+
+      return {
+        success: true,
+        user: {
+          _openid: openid,
+          username: user.username,
+          nickName: nickName !== undefined ? nickName : user.nickName,
+          avatarUrl: avatarUrl !== undefined ? avatarUrl : user.avatarUrl,
+          createTime: user.createTime,
+          lastLoginTime: user.lastLoginTime
+        }
+      }
+    } else if (action === 'updatePassword') {
+      const { data: users } = await db.collection('users').where({
+        _openid: openid
+      }).get()
+
+      if (users.length === 0) {
+        return { success: false, error: '用户不存在' }
+      }
+
+      const user = users[0]
+      const isValid = verifyPassword(oldPassword, user.passwordHash, user.passwordSalt)
+      if (!isValid) {
+        return { success: false, error: '当前密码错误' }
+      }
+
+      if (!newPassword || newPassword.length < 6) {
+        return { success: false, error: '新密码至少6个字符' }
+      }
+
+      const { hash, salt } = hashPassword(newPassword)
+      await db.collection('users').doc(user._id).update({
+        data: {
+          passwordHash: hash,
+          passwordSalt: salt
+        }
+      })
+
+      return { success: true, message: '密码修改成功' }
     }
 
     return { success: false, error: '未知操作' }

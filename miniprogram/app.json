@@ -5,7 +5,8 @@
     "pages/statistics/statistics",
     "pages/mine/mine",
     "pages/backup/backup",
-    "pages/login/login"
+    "pages/login/login",
+    "pages/settings/settings"
   ],
   "window": {
     "navigationBarTextStyle": "black",

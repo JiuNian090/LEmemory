@@ -40,7 +40,13 @@ page {
 
 .user-info {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.user-hint {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .nickname {
