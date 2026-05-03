@@ -4,24 +4,23 @@ import {
   exportAllLocalData,
   importLocalData,
   updateSyncStatus,
-  getSyncStatus,
   userCollection,
   cardGroupCollection,
   cardCollection,
   studyRecordCollection,
   favoriteCollection,
-  backupCollection,
-  getStorageInfo,
-  clearAllLocalData
+  getLocalStorageData,
+  setLocalStorageData,
+  getStorageInfo
 } from './db'
 import type { BackupData, BackupRecord, CardGroup, Card, StudyRecord, Favorite } from './types'
+
+const BACKUP_STORAGE_KEY = 'backup_records'
 
 /**
  * 同步管理器
  */
 class SyncManager {
-  private isSyncing = false
-  private syncQueue: any[] = []
 
   /**
    * 登录后执行账号关联和数据同步
@@ -45,7 +44,6 @@ class SyncManager {
       }
 
       updateSyncStatus({ isSyncing: true })
-      this.isSyncing = true
 
       // 1. 检查云端是否已有数据
       const hasCloudData = await this.checkCloudData(userId)
@@ -102,7 +100,6 @@ class SyncManager {
         syncedCount: 0
       }
     } finally {
-      this.isSyncing = false
     }
   }
 
@@ -134,7 +131,7 @@ class SyncManager {
   private async uploadLocalDataToCloud(
     localData: BackupData,
     userId: string,
-    userInfo: any
+    _userInfo: any
   ): Promise<number> {
     let count = 0
 
@@ -230,7 +227,7 @@ class SyncManager {
   private async mergeAndSyncData(
     localData: BackupData,
     userId: string,
-    userInfo: any
+    _userInfo: any
   ): Promise<number> {
     // 简单策略：只上传本地新增的（以 groupId/cardId 为标识）
     // 获取云端现有ID
@@ -319,20 +316,16 @@ class SyncManager {
       if (userId === 'local_user') {
         return {
           success: false,
-          message: '需要先登录才能备份到云端'
+          message: '需要先登录才能备份'
         }
       }
 
       wx.showLoading({ title: '备份中...' })
 
-      // 导出本地数据
       const localData = exportAllLocalData()
-      
-      // 计算数据大小
       const dataJson = JSON.stringify(localData)
-      const dataSize = new Blob([dataJson]).size
+      const dataSize = dataJson.length
 
-      // 创建备份记录
       const backupId = generateId()
       const backupRecord: BackupRecord = {
         backupId,
@@ -346,14 +339,12 @@ class SyncManager {
         favoritesCount: localData.favorites.length
       }
 
-      // 保存备份记录和数据
-      await backupCollection.add({
-        data: {
-          ...backupRecord,
-          backupData: localData,
-          _openid: userId
-        }
+      const backups = getLocalStorageData(BACKUP_STORAGE_KEY)
+      backups.push({
+        ...backupRecord,
+        backupData: localData
       })
+      setLocalStorageData(BACKUP_STORAGE_KEY, backups)
 
       wx.hideLoading()
 
@@ -383,13 +374,13 @@ class SyncManager {
         return []
       }
 
-      const { data } = await backupCollection
-        .where({ userId })
-        .orderBy('backupTime', 'desc')
-        .limit(20)
-        .get()
+      const backups = getLocalStorageData(BACKUP_STORAGE_KEY)
+      const userBackups = backups
+        .filter((item: any) => item.userId === userId || item._openid === userId)
+        .sort((a: any, b: any) => new Date(b.backupTime).getTime() - new Date(a.backupTime).getTime())
+        .slice(0, 20)
 
-      return data.map((item: any) => ({
+      return userBackups.map((item: any) => ({
         backupId: item.backupId,
         userId: item.userId,
         backupTime: new Date(item.backupTime),
@@ -424,13 +415,12 @@ class SyncManager {
 
       wx.showLoading({ title: '恢复中...' })
 
-      // 获取备份数据
-      const { data: backups } = await backupCollection
-        .where({ backupId, userId })
-        .limit(1)
-        .get()
+      const backups = getLocalStorageData(BACKUP_STORAGE_KEY)
+      const found = backups.find((item: any) =>
+        item.backupId === backupId && (item.userId === userId || item._openid === userId)
+      )
 
-      if (backups.length === 0) {
+      if (!found) {
         wx.hideLoading()
         return {
           success: false,
@@ -438,10 +428,7 @@ class SyncManager {
         }
       }
 
-      const backupData = backups[0].backupData as BackupData
-      
-      // 导入到本地
-      importLocalData(backupData)
+      importLocalData(found.backupData as BackupData)
 
       wx.hideLoading()
 
@@ -470,13 +457,13 @@ class SyncManager {
         return false
       }
 
-      const { data: backups } = await backupCollection
-        .where({ backupId, userId })
-        .limit(1)
-        .get()
+      const backups = getLocalStorageData(BACKUP_STORAGE_KEY)
+      const filtered = backups.filter((item: any) =>
+        !(item.backupId === backupId && (item.userId === userId || item._openid === userId))
+      )
 
-      if (backups.length > 0) {
-        await backupCollection.doc(backups[0]._id).remove()
+      if (filtered.length !== backups.length) {
+        setLocalStorageData(BACKUP_STORAGE_KEY, filtered)
       }
 
       return true

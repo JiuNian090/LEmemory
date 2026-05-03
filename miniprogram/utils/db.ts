@@ -40,10 +40,7 @@ function initDB() {
 
 // ==================== 本地存储操作（加密版）====================
 
-/**
- * 从本地存储获取数据（解密）
- */
-function getStorageData(key: string): any[] {
+export function getLocalStorageData(key: string): any[] {
   try {
     const data = getEncryptedStorage(key)
     return data || []
@@ -53,10 +50,7 @@ function getStorageData(key: string): any[] {
   }
 }
 
-/**
- * 保存数据到本地存储（加密）
- */
-function setStorageData(key: string, data: any[]): boolean {
+export function setLocalStorageData(key: string, data: any[]): boolean {
   try {
     return setEncryptedStorage(key, data)
   } catch (err) {
@@ -98,7 +92,7 @@ export function updateSyncStatus(status: Partial<SyncStatus>): void {
  * 获取待同步数据
  */
 function getPendingSync(): any[] {
-  return getStorageData(STORAGE_KEYS.PENDING_SYNC)
+  return getLocalStorageData(STORAGE_KEYS.PENDING_SYNC)
 }
 
 /**
@@ -110,7 +104,7 @@ function addPendingSync(item: any): void {
     ...item,
     addedTime: new Date().toISOString()
   })
-  setStorageData(STORAGE_KEYS.PENDING_SYNC, pending)
+  setLocalStorageData(STORAGE_KEYS.PENDING_SYNC, pending)
   
   updateSyncStatus({
     pendingItems: pending.length
@@ -128,7 +122,7 @@ class LocalCollection {
   }
   
   add({ data }: { data: any }): Promise<{ _id: string }> {
-    const items = getStorageData(this.key)
+    const items = getLocalStorageData(this.key)
     const newItem = {
       ...data,
       _id: generateId(),
@@ -138,7 +132,7 @@ class LocalCollection {
       syncStatus: 'local'
     }
     items.push(newItem)
-    setStorageData(this.key, items)
+    setLocalStorageData(this.key, items)
     
     // 添加到待同步队列
     addPendingSync({
@@ -151,7 +145,7 @@ class LocalCollection {
   }
   
   get(): Promise<{ data: any[] }> {
-    const items = getStorageData(this.key)
+    const items = getLocalStorageData(this.key)
     return Promise.resolve({ data: items })
   }
   
@@ -179,7 +173,7 @@ class LocalQuery {
   }
   
   get(): Promise<{ data: any[] }> {
-    const items = getStorageData(this.key)
+    const items = getLocalStorageData(this.key)
     const filtered = items.filter(item => {
       for (const key in this.query) {
         if (item[key] !== this.query[key]) {
@@ -207,7 +201,7 @@ class LocalDoc {
   }
   
   update({ data }: { data: any }): Promise<any> {
-    const items = getStorageData(this.key)
+    const items = getLocalStorageData(this.key)
     const index = items.findIndex(item => item._id === this.id || item.groupId === this.id || item.cardId === this.id)
     if (index !== -1) {
       items[index] = { 
@@ -216,7 +210,7 @@ class LocalDoc {
         updateTime: new Date(),
         syncStatus: 'pending'
       }
-      setStorageData(this.key, items)
+      setLocalStorageData(this.key, items)
       
       // 添加到待同步队列
       addPendingSync({
@@ -230,9 +224,9 @@ class LocalDoc {
   }
   
   remove(): Promise<any> {
-    const items = getStorageData(this.key)
+    const items = getLocalStorageData(this.key)
     const filtered = items.filter(item => item._id !== this.id && item.groupId !== this.id && item.cardId !== this.id)
-    setStorageData(this.key, filtered)
+    setLocalStorageData(this.key, filtered)
     
     // 添加到待同步队列
     addPendingSync({
@@ -245,7 +239,7 @@ class LocalDoc {
   }
   
   get(): Promise<{ data: any }> {
-    const items = getStorageData(this.key)
+    const items = getLocalStorageData(this.key)
     const item = items.find(item => item._id === this.id || item.groupId === this.id || item.cardId === this.id)
     return Promise.resolve({ data: item || null })
   }
@@ -301,10 +295,10 @@ export function exportAllLocalData(): BackupData {
   return {
     version: '1.0',
     backupTime: new Date(),
-    cardGroups: getStorageData(STORAGE_KEYS.CARD_GROUPS) as CardGroup[],
-    cards: getStorageData(STORAGE_KEYS.CARDS) as Card[],
-    studyRecords: getStorageData(STORAGE_KEYS.STUDY_RECORDS) as StudyRecord[],
-    favorites: getStorageData(STORAGE_KEYS.FAVORITES) as Favorite[]
+    cardGroups: getLocalStorageData(STORAGE_KEYS.CARD_GROUPS) as CardGroup[],
+    cards: getLocalStorageData(STORAGE_KEYS.CARDS) as Card[],
+    studyRecords: getLocalStorageData(STORAGE_KEYS.STUDY_RECORDS) as StudyRecord[],
+    favorites: getLocalStorageData(STORAGE_KEYS.FAVORITES) as Favorite[]
   }
 }
 
@@ -318,10 +312,10 @@ export function importLocalData(data: BackupData): boolean {
     setEncryptedStorage('backup_before_import', currentData)
     
     // 导入新数据
-    setStorageData(STORAGE_KEYS.CARD_GROUPS, data.cardGroups)
-    setStorageData(STORAGE_KEYS.CARDS, data.cards)
-    setStorageData(STORAGE_KEYS.STUDY_RECORDS, data.studyRecords)
-    setStorageData(STORAGE_KEYS.FAVORITES, data.favorites)
+    setLocalStorageData(STORAGE_KEYS.CARD_GROUPS, data.cardGroups)
+    setLocalStorageData(STORAGE_KEYS.CARDS, data.cards)
+    setLocalStorageData(STORAGE_KEYS.STUDY_RECORDS, data.studyRecords)
+    setLocalStorageData(STORAGE_KEYS.FAVORITES, data.favorites)
     
     console.log('[DB] 数据导入成功')
     return true

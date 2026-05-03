@@ -55,6 +55,11 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
   },
 
   /**
+   * 阻止事件冒泡
+   */
+  stopPropagation() {},
+
+  /**
    * 加载数据
    */
   async loadData() {
