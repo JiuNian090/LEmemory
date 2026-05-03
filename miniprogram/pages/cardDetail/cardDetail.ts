@@ -41,6 +41,7 @@ interface CardDetailPageData {
   favorites: FavoriteItem[]
   currentCardIndex: number
   isFlipped: boolean
+  cardAnim: string
   studyStartTime: number | null
   showCardDialog: boolean
   dialogMode: 'add' | 'edit'
@@ -57,9 +58,7 @@ interface CardDetailPageData {
   masteryData: MasteryData
   totalCards: number
   studiedCards: number
-  notStartedDeg: string
-  basicDeg: string
-  goodDeg: string
+  donutGradient: string
 }
 
 Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>({
@@ -73,6 +72,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
     favorites: [],
     currentCardIndex: 0,
     isFlipped: false,
+    cardAnim: '',
     studyStartTime: null,
     showCardDialog: false,
     dialogMode: 'add',
@@ -94,9 +94,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
     },
     totalCards: 0,
     studiedCards: 0,
-    notStartedDeg: '0deg',
-    basicDeg: '0deg',
-    goodDeg: '0deg'
+    donutGradient: 'conic-gradient(#d1d5db 0deg, #d1d5db 360deg)'
   },
 
   onLoad(options: any) {
@@ -110,7 +108,6 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
     })
     this.loadCards()
     this.loadFavorites()
-    this.calculateStats()
   },
 
   onShow() {
@@ -140,6 +137,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
         cards,
         totalCards: cards.length
       })
+      this.calculateStats()
       console.log('[CardDetail] 加载卡牌成功', cards.length)
     } catch (err) {
       console.error('[CardDetail] 加载卡牌失败', err)
@@ -208,24 +206,21 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
       }
     })
 
-    // 计算环形图角度
     const totalCards = cards.length
-    let notStartedDeg = 0
-    let basicDeg = 0
-    let goodDeg = 0
+    let donutGradient = 'conic-gradient(#d1d5db 0deg, #d1d5db 360deg)'
 
     if (totalCards > 0) {
-      notStartedDeg = (masteryData.notStarted / totalCards) * 360
-      basicDeg = notStartedDeg + (masteryData.basic / totalCards) * 360
-      goodDeg = basicDeg + (masteryData.good / totalCards) * 360
+      const notStartedEnd = (masteryData.notStarted / totalCards) * 360
+      const basicEnd = notStartedEnd + (masteryData.basic / totalCards) * 360
+      const goodEnd = basicEnd + (masteryData.good / totalCards) * 360
+
+      donutGradient = `conic-gradient(#d1d5db ${notStartedEnd}deg, #fbbf24 ${notStartedEnd}deg, #fbbf24 ${basicEnd}deg, #34d399 ${basicEnd}deg, #34d399 ${goodEnd}deg, #f87171 ${goodEnd}deg, #f87171 360deg)`
     }
 
     this.setData({
       masteryData,
       studiedCards,
-      notStartedDeg: notStartedDeg + 'deg',
-      basicDeg: basicDeg + 'deg',
-      goodDeg: goodDeg + 'deg',
+      donutGradient,
       todayStats: {
         toLearn: cards.length > 0 ? Math.min(10, cards.length) : 0,
         toReview: cards.length > 0 ? Math.min(5, cards.length) : 0,
@@ -260,6 +255,18 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
     }
     this.setData({
       isStudying: true
+    })
+  },
+
+  /**
+   * 结束学习
+   */
+  stopStudy() {
+    this.setData({
+      isStudying: false,
+      isFlipped: false,
+      currentCardIndex: 0,
+      cardAnim: ''
     })
   },
 
@@ -309,11 +316,18 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
    * 上一张卡牌
    */
   prevCard() {
-    if (this.data.currentCardIndex > 0) {
-      this.setData({
-        currentCardIndex: this.data.currentCardIndex - 1,
-        isFlipped: false
-      })
+    if (this.data.currentCardIndex > 0 && !this.data.cardAnim) {
+      this.setData({ cardAnim: 'anim-prev-out' })
+      setTimeout(() => {
+        this.setData({
+          currentCardIndex: this.data.currentCardIndex - 1,
+          isFlipped: false,
+          cardAnim: 'anim-prev-in'
+        })
+        setTimeout(() => {
+          this.setData({ cardAnim: '' })
+        }, 300)
+      }, 300)
     }
   },
 
@@ -321,11 +335,18 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
    * 下一张卡牌
    */
   nextCard() {
-    if (this.data.currentCardIndex < this.data.cards.length - 1) {
-      this.setData({
-        currentCardIndex: this.data.currentCardIndex + 1,
-        isFlipped: false
-      })
+    if (this.data.currentCardIndex < this.data.cards.length - 1 && !this.data.cardAnim) {
+      this.setData({ cardAnim: 'anim-next-out' })
+      setTimeout(() => {
+        this.setData({
+          currentCardIndex: this.data.currentCardIndex + 1,
+          isFlipped: false,
+          cardAnim: 'anim-next-in'
+        })
+        setTimeout(() => {
+          this.setData({ cardAnim: '' })
+        }, 300)
+      }, 300)
     }
   },
 

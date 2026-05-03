@@ -69,11 +69,7 @@
         <view class="mastery-card">
           <view class="section-title">掌握程度</view>
           <view class="mastery-content">
-            <view class="donut-chart">
-              <view class="donut-segment difficult" style="transform: rotate(0deg);"></view>
-              <view class="donut-segment good" style="transform: rotate({{goodDeg}});"></view>
-              <view class="donut-segment basic" style="transform: rotate({{basicDeg}});"></view>
-              <view class="donut-segment not-started" style="transform: rotate({{notStartedDeg}});"></view>
+            <view class="donut-chart" style="background: {{donutGradient}}">
               <view class="donut-center">
                 <view class="donut-number">{{totalCards}}</view>
                 <view class="donut-label">总卡牌</view>
@@ -108,7 +104,7 @@
       <!-- 学习模式 -->
       <view wx:if="{{isStudying && cards.length > 0}}" class="study-mode">
         <view class="card-wrapper" bindtap="flipCard">
-          <view class="study-card {{isFlipped ? 'flipped' : ''}}">
+          <view class="study-card {{isFlipped ? 'flipped' : ''}} {{cardAnim}}">
             <view class="card-face front">
               <view class="card-label">问题</view>
               <view class="card-text">{{cards[currentCardIndex].front}}</view>
