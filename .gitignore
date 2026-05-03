@@ -1,0 +1,40 @@
+# 微信小程序开发工具
+project.private.config.json
+
+# 云函数依赖
+**/node_modules/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE 和编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志和临时文件
+*.log
+*.tmp
+*.cache
+
+# 构建产物
+dist/
+build/
+
+# 本地配置（包含密钥、环境变量等）
+**/.env
+**/.env.local
+**/.env.*.local
+
+# 云开发敏感配置（可选，根据需要添加）
+# cloudfunctions/*/config.json （如果包含密钥信息）
+
+# 测试和覆盖率
+coverage/
+.nyc_output/
+
+# TypeScript
+*.tsbuildinfo
