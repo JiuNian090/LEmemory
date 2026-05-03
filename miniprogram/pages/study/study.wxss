@@ -1,5 +1,6 @@
 .content-section {
   padding: 0;
+  padding-bottom: 160rpx;
 }
 
 .card-grid {
@@ -142,7 +143,6 @@
   font-weight: 500;
 }
 
-/* 弹窗样式 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -210,7 +210,7 @@
 .input-field {
   width: 100%;
   padding: 20rpx;
-  background: var(--bg-secondary);
+  background: var(--bg-color);
   border-radius: 12rpx;
   font-size: 28rpx;
   color: var(--text-primary);
@@ -220,7 +220,7 @@
 .textarea-field {
   width: 100%;
   padding: 20rpx;
-  background: var(--bg-secondary);
+  background: var(--bg-color);
   border-radius: 12rpx;
   font-size: 28rpx;
   color: var(--text-primary);
@@ -248,7 +248,7 @@
 }
 
 .btn-cancel {
-  background: var(--bg-secondary);
+  background: var(--bg-color);
   color: var(--text-secondary);
 }
 

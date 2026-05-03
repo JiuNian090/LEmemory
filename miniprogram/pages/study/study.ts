@@ -7,8 +7,8 @@ interface CardGroupItem {
   userId?: string
   title: string
   description?: string
-  createTime: Date
-  updateTime: Date
+  createTime: any
+  updateTime: any
   _openid?: string
 }
 
@@ -47,7 +47,7 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>(
       
       const formattedData = data.map((item: any) => ({
         ...item,
-        updateTime: formatDate(new Date(item.updateTime))
+        updateTime: this.formatUpdateTime(item.updateTime)
       }))
 
       this.setData({
@@ -56,13 +56,28 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>(
       console.log('[StudyPage] 加载卡牌组成功', formattedData.length)
     } catch (err) {
       console.error('[StudyPage] 加载卡牌组失败', err)
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      })
+      // 不显示错误提示，静默失败
     } finally {
       this.setData({ isRefreshing: false })
       wx.stopPullDownRefresh()
+    }
+  },
+
+  /**
+   * 格式化更新时间
+   */
+  formatUpdateTime(time: any): string {
+    try {
+      if (time instanceof Date) {
+        return formatDate(time)
+      } else if (typeof time === 'string') {
+        return formatDate(new Date(time))
+      } else if (time) {
+        return formatDate(new Date())
+      }
+      return ''
+    } catch {
+      return ''
     }
   },
 
@@ -164,5 +179,12 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>(
     wx.navigateTo({
       url: `/pages/cardDetail/cardDetail?groupId=${groupid}&title=${title}`
     })
+  },
+
+  /**
+   * 阻止事件冒泡
+   */
+  stopPropagation() {
+    // 防止点击弹窗内容时关闭弹窗
   }
 })

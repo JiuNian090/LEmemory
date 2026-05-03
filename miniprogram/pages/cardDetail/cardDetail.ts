@@ -9,6 +9,8 @@ interface CardItem {
   back: string
   createTime: Date
   _openid?: string
+  status?: 'new' | 'learning' | 'mastered' | 'difficult'
+  reviewCount?: number
 }
 
 interface FavoriteItem {
@@ -22,9 +24,17 @@ interface FavoriteItem {
   card?: CardItem
 }
 
+interface MasteryData {
+  notStarted: number
+  basic: number
+  good: number
+  difficult: number
+}
+
 interface CardDetailPageData {
   groupId: string
   title: string
+  description: string
   currentTab: number
   tabs: string[]
   cards: CardItem[]
@@ -38,12 +48,25 @@ interface CardDetailPageData {
   newFront: string
   newBack: string
   favoriteCardIds: Set<string>
+  isStudying: boolean
+  todayStats: {
+    toLearn: number
+    toReview: number
+    studiedTime: number
+  }
+  masteryData: MasteryData
+  totalCards: number
+  studiedCards: number
+  notStartedDeg: string
+  basicDeg: string
+  goodDeg: string
 }
 
 Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>({
   data: {
     groupId: '',
     title: '',
+    description: '',
     currentTab: 0,
     tabs: ['学习', '目录', '卡牌', '收藏'],
     cards: [],
@@ -56,19 +79,38 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
     editCardId: '',
     newFront: '',
     newBack: '',
-    favoriteCardIds: new Set()
+    favoriteCardIds: new Set(),
+    isStudying: false,
+    todayStats: {
+      toLearn: 0,
+      toReview: 0,
+      studiedTime: 0
+    },
+    masteryData: {
+      notStarted: 0,
+      basic: 0,
+      good: 0,
+      difficult: 0
+    },
+    totalCards: 0,
+    studiedCards: 0,
+    notStartedDeg: '0deg',
+    basicDeg: '0deg',
+    goodDeg: '0deg'
   },
 
   onLoad(options: any) {
     this.setData({
       groupId: options.groupId || '',
-      title: options.title || ''
+      title: options.title || '',
+      description: options.description || ''
     })
     wx.setNavigationBarTitle({
       title: options.title || '卡牌详情'
     })
     this.loadCards()
     this.loadFavorites()
+    this.calculateStats()
   },
 
   onShow() {
@@ -88,10 +130,17 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
         groupId: this.data.groupId
       }).get()
 
+      const cards = (data as CardItem[]).map(card => ({
+        ...card,
+        status: card.status || 'new',
+        reviewCount: card.reviewCount || 0
+      }))
+
       this.setData({
-        cards: data as CardItem[]
+        cards,
+        totalCards: cards.length
       })
-      console.log('[CardDetail] 加载卡牌成功', data.length)
+      console.log('[CardDetail] 加载卡牌成功', cards.length)
     } catch (err) {
       console.error('[CardDetail] 加载卡牌失败', err)
       wx.showToast({
@@ -130,6 +179,62 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
   },
 
   /**
+   * 计算统计数据
+   */
+  calculateStats() {
+    const { cards } = this.data
+    const masteryData = {
+      notStarted: 0,
+      basic: 0,
+      good: 0,
+      difficult: 0
+    }
+
+    let studiedCards = 0
+
+    cards.forEach(card => {
+      const status = card.status || 'new'
+      if (status === 'new') {
+        masteryData.notStarted++
+      } else if (status === 'learning') {
+        masteryData.basic++
+        studiedCards++
+      } else if (status === 'mastered') {
+        masteryData.good++
+        studiedCards++
+      } else if (status === 'difficult') {
+        masteryData.difficult++
+        studiedCards++
+      }
+    })
+
+    // 计算环形图角度
+    const totalCards = cards.length
+    let notStartedDeg = 0
+    let basicDeg = 0
+    let goodDeg = 0
+
+    if (totalCards > 0) {
+      notStartedDeg = (masteryData.notStarted / totalCards) * 360
+      basicDeg = notStartedDeg + (masteryData.basic / totalCards) * 360
+      goodDeg = basicDeg + (masteryData.good / totalCards) * 360
+    }
+
+    this.setData({
+      masteryData,
+      studiedCards,
+      notStartedDeg: notStartedDeg + 'deg',
+      basicDeg: basicDeg + 'deg',
+      goodDeg: goodDeg + 'deg',
+      todayStats: {
+        toLearn: cards.length > 0 ? Math.min(10, cards.length) : 0,
+        toReview: cards.length > 0 ? Math.min(5, cards.length) : 0,
+        studiedTime: 0
+      }
+    })
+  },
+
+  /**
    * 切换标签页
    */
   switchTab(e: WechatMiniprogram.TouchEvent) {
@@ -140,6 +245,22 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
     if (index === 3) {
       this.loadFavorites()
     }
+  },
+
+  /**
+   * 开始学习
+   */
+  startStudy() {
+    if (this.data.cards.length === 0) {
+      wx.showToast({
+        title: '请先添加卡牌',
+        icon: 'none'
+      })
+      return
+    }
+    this.setData({
+      isStudying: true
+    })
   },
 
   /**
@@ -275,7 +396,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
    * 确认保存卡牌
    */
   confirmSaveCard() {
-    const { newFront, newBack, dialogMode, editCardId, cards } = this.data
+    const { newFront, newBack, dialogMode, editCardId } = this.data
     
     if (!newFront.trim() || !newBack.trim()) {
       wx.showToast({
@@ -305,7 +426,9 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
           groupId: this.data.groupId,
           front: front.trim(),
           back: back.trim(),
-          createTime: new Date()
+          createTime: new Date(),
+          status: 'new',
+          reviewCount: 0
         }
       })
 
@@ -316,6 +439,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
 
       this.closeDialog()
       this.loadCards()
+      this.calculateStats()
     } catch (err) {
       console.error('[CardDetail] 添加卡牌失败', err)
       wx.showToast({
@@ -397,6 +521,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
         })
         
         this.loadCards()
+        this.calculateStats()
       }
     } catch (err) {
       console.error('[CardDetail] 删除卡牌失败', err)
@@ -467,5 +592,29 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObj
         icon: 'none'
       })
     }
+  },
+
+  /**
+   * 格式化时间
+   */
+  formatTime(seconds: number): string {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+    
+    if (hours > 0) {
+      return `${hours}小时${minutes}分钟`
+    } else if (minutes > 0) {
+      return `${minutes}分钟${secs}秒`
+    } else {
+      return `${secs}秒`
+    }
+  },
+
+  /**
+   * 阻止事件冒泡
+   */
+  stopPropagation() {
+    // 防止点击弹窗内容时关闭弹窗
   }
 })

@@ -1,11 +1,4 @@
 <view class="container">
-  <view class="page-header">
-    <view class="header-content">
-      <text class="header-title">📖 {{title}}</text>
-      <text class="header-subtitle">开始你的学习之旅</text>
-    </view>
-  </view>
-
   <view class="tabs-wrapper">
     <view class="tabs">
       <block wx:for="{{tabs}}" wx:key="index">
@@ -19,7 +12,101 @@
   <view class="tab-content">
     <!-- 学习标签页 -->
     <view wx:if="{{currentTab === 0}}" class="study-section">
-      <block wx:if="{{cards.length > 0}}">
+      <view wx:if="{{!isStudying}}" class="study-dashboard">
+        <!-- 卡牌组信息 -->
+        <view class="group-info-card">
+          <view class="group-icon">🎴</view>
+          <view class="group-details">
+            <view class="group-title">{{title}}</view>
+            <view class="group-stats">
+              <text>学习进度: {{studiedCards}}/{{totalCards}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 今日学习统计 -->
+        <view class="today-stats-card">
+          <view class="stat-item">
+            <view class="stat-value today">{{todayStats.toLearn}}</view>
+            <view class="stat-label">今日待学</view>
+          </view>
+          <view class="stat-divider"></view>
+          <view class="stat-item">
+            <view class="stat-value review">{{todayStats.toReview}}</view>
+            <view class="stat-label">今日待复习</view>
+          </view>
+          <view class="stat-divider"></view>
+          <view class="stat-item">
+            <view class="stat-value time">{{formatTime(todayStats.studiedTime)}}</view>
+            <view class="stat-label">今日已学时长</view>
+          </view>
+        </view>
+
+        <!-- 开始学习按钮 -->
+        <view class="start-study-btn" bindtap="startStudy">
+          <text class="btn-icon">▶️</text>
+          <text class="btn-text">开始学习</text>
+        </view>
+        <view class="study-hint">预计用时: {{totalCards > 0 ? Math.ceil(totalCards * 2) : 0}}分钟</view>
+
+        <!-- 快捷功能按钮 -->
+        <view class="quick-actions">
+          <view class="quick-action-btn">
+            <text class="action-icon">🎧</text>
+            <text class="action-text">听卡牌</text>
+          </view>
+          <view class="quick-action-btn">
+            <text class="action-icon">📖</text>
+            <text class="action-text">浏览</text>
+          </view>
+          <view class="quick-action-btn">
+            <text class="action-icon">📝</text>
+            <text class="action-text">测验</text>
+          </view>
+        </view>
+
+        <!-- 掌握程度图表 -->
+        <view class="mastery-card">
+          <view class="section-title">掌握程度</view>
+          <view class="mastery-content">
+            <view class="donut-chart">
+              <view class="donut-segment difficult" style="transform: rotate(0deg);"></view>
+              <view class="donut-segment good" style="transform: rotate({{goodDeg}});"></view>
+              <view class="donut-segment basic" style="transform: rotate({{basicDeg}});"></view>
+              <view class="donut-segment not-started" style="transform: rotate({{notStartedDeg}});"></view>
+              <view class="donut-center">
+                <view class="donut-number">{{totalCards}}</view>
+                <view class="donut-label">总卡牌</view>
+              </view>
+            </view>
+            <view class="mastery-legend">
+              <view class="legend-item">
+                <view class="legend-dot not-started"></view>
+                <view class="legend-label">未掌握</view>
+                <view class="legend-value">{{masteryData.notStarted}}张</view>
+              </view>
+              <view class="legend-item">
+                <view class="legend-dot basic"></view>
+                <view class="legend-label">基本掌握</view>
+                <view class="legend-value">{{masteryData.basic}}张</view>
+              </view>
+              <view class="legend-item">
+                <view class="legend-dot good"></view>
+                <view class="legend-label">良好掌握</view>
+                <view class="legend-value">{{masteryData.good}}张</view>
+              </view>
+              <view class="legend-item">
+                <view class="legend-dot difficult"></view>
+                <view class="legend-label">疑难卡片</view>
+                <view class="legend-value">{{masteryData.difficult}}张</view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 学习模式 -->
+      <view wx:if="{{isStudying && cards.length > 0}}" class="study-mode">
         <view class="card-wrapper" bindtap="flipCard">
           <view class="study-card {{isFlipped ? 'flipped' : ''}}">
             <view class="card-face front">
@@ -46,8 +133,9 @@
             下一张 ›
           </button>
         </view>
-      </block>
-      <view wx:else class="empty-state">
+      </view>
+
+      <view wx:if="{{!isStudying && cards.length === 0}}" class="empty-state">
         <image class="empty-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
         <view class="empty-text">暂无卡牌</view>
         <view class="empty-desc">切换到"卡牌"标签页添加</view>
@@ -150,11 +238,11 @@
       <view class="modal-body">
         <view class="input-group">
           <text class="input-label">正面（问题） *</text>
-          <textarea class="textarea-field" placeholder="请输入卡牌正面内容" value="{{newFront}}" bindinput="onFrontInput" maxlength="200" auto-height/>
+          <textarea class="textarea-field" placeholder="请输入卡牌正面内容" value="{{newFront}}" bindinput="onFrontInput" maxlength="200" auto-height></textarea>
         </view>
         <view class="input-group">
           <text class="input-label">背面（答案） *</text>
-          <textarea class="textarea-field" placeholder="请输入卡牌背面内容" value="{{newBack}}" bindinput="onBackInput" maxlength="500" auto-height/>
+          <textarea class="textarea-field" placeholder="请输入卡牌背面内容" value="{{newBack}}" bindinput="onBackInput" maxlength="500" auto-height></textarea>
         </view>
       </view>
       <view class="modal-footer">
