@@ -1,24 +1,26 @@
-import { userCollection } from '../../utils/db'
+import { IAppOption } from '../../utils/types'
 
 const app = getApp<IAppOption>()
 
 interface MinePageData {
-  userInfo: WechatMiniprogram.UserInfo | null
-  canIUse: boolean
+  userInfo: any
 }
 
-Page<MinePageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>({
+Page<MinePageData, WechatMiniprogram.IAnyObject>({
   data: {
-    userInfo: null,
-    canIUse: wx.canIUse('button.open-type.getUserProfile')
+    userInfo: null
   },
 
   onLoad() {
     this.loadUserInfo()
   },
 
+  onShow() {
+    this.loadUserInfo()
+  },
+
   /**
-   * 加载用户信息（先从缓存，再从全局数据）
+   * 加载用户信息
    */
   loadUserInfo() {
     try {
@@ -27,81 +29,63 @@ Page<MinePageData, WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>({
         this.setData({
           userInfo: cachedUser
         })
-        return
+      } else if (app.globalData.userInfo) {
+        this.setData({
+          userInfo: app.globalData.userInfo
+        })
       }
     } catch (err) {
       console.error('[MinePage] 读取缓存失败', err)
     }
-
-    if (app.globalData.userInfo) {
-      this.setData({
-        userInfo: app.globalData.userInfo
-      })
-    }
   },
 
   /**
-   * 获取用户信息并登录
+   * 处理头部点击
    */
-  getUserProfile() {
-    wx.getUserProfile({
-      desc: '用于完善用户资料',
+  handleHeaderClick() {
+    wx.navigateTo({
+      url: '/pages/login/login'
+    })
+  },
+
+  /**
+   * 退出登录
+   */
+  handleLogout() {
+    wx.showModal({
+      title: '退出登录',
+      content: '确定要退出当前账号吗？',
+      confirmColor: '#f87171',
       success: (res) => {
-        console.log('[MinePage] 获取用户信息成功', res.userInfo)
-        app.globalData.userInfo = res.userInfo
-        this.setData({
-          userInfo: res.userInfo
-        })
-        wx.setStorageSync('userInfo', res.userInfo)
-        this.saveUserInfo(res.userInfo)
-        wx.showToast({
-          title: '登录成功',
-          icon: 'success'
-        })
-      },
-      fail: (err) => {
-        console.error('[MinePage] 获取用户信息失败', err)
-        wx.showToast({
-          title: '授权失败',
-          icon: 'none'
-        })
+        if (res.confirm) {
+          // 清除用户信息
+          app.globalData.userInfo = null
+          this.setData({
+            userInfo: null
+          })
+          
+          // 保留记住密码的信息，只清除用户登录状态
+          try {
+            wx.removeStorageSync('userInfo')
+          } catch (err) {
+            console.error('[MinePage] 清除用户信息失败', err)
+          }
+
+          wx.showToast({
+            title: '已退出登录',
+            icon: 'success'
+          })
+        }
       }
     })
   },
 
   /**
-   * 保存用户信息到数据库
+   * 跳转到备份页面
    */
-  async saveUserInfo(userInfo: WechatMiniprogram.UserInfo) {
-    try {
-      wx.showLoading({
-        title: '同步中...'
-      })
-
-      const { data } = await userCollection.get()
-      
-      if (data.length === 0) {
-        await userCollection.add({
-          data: {
-            nickName: userInfo.nickName,
-            avatarUrl: userInfo.avatarUrl,
-            createTime: new Date()
-          }
-        })
-        console.log('[MinePage] 创建用户信息成功')
-      } else {
-        await userCollection.doc(data[0]._id).update({
-          data: {
-            nickName: userInfo.nickName,
-            avatarUrl: userInfo.avatarUrl
-          }
-        })
-        console.log('[MinePage] 更新用户信息成功')
-      }
-    } catch (err) {
-      console.error('[MinePage] 保存用户信息失败', err)
-    } finally {
-      wx.hideLoading()
-    }
+  goToBackup() {
+    wx.navigateTo({
+      url: '/pages/backup/backup'
+    })
   }
 })

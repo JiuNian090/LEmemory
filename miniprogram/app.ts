@@ -1,3 +1,5 @@
+import { IAppOption } from './utils/types'
+
 App<IAppOption>({
   globalData: {
     userInfo: null

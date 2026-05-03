@@ -3,7 +3,9 @@
     "pages/study/study",
     "pages/cardDetail/cardDetail",
     "pages/statistics/statistics",
-    "pages/mine/mine"
+    "pages/mine/mine",
+    "pages/backup/backup",
+    "pages/login/login"
   ],
   "window": {
     "navigationBarTextStyle": "black",

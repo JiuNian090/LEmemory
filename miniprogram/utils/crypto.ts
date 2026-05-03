@@ -1,0 +1,157 @@
+/**
+ * 简单的加密工具
+ * 注意：生产环境建议使用更安全的加密方案
+ */
+
+// 加密密钥（实际项目中应该从服务端获取）
+const SECRET_KEY = 'lememory_2024_secure_key'
+
+const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/='
+
+function base64Encode(str: string): string {
+  try {
+    const bytes = encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+      (_, p1) => String.fromCharCode(parseInt(p1, 16))
+    )
+    let result = ''
+    let i = 0
+    while (i < bytes.length) {
+      const a = bytes.charCodeAt(i++)
+      const b = bytes.charCodeAt(i++)
+      const c = bytes.charCodeAt(i++)
+      const idx1 = a >> 2
+      const idx2 = ((a & 3) << 4) | (b >> 4)
+      const idx3 = isNaN(b) ? 64 : ((b & 15) << 2) | (c >> 6)
+      const idx4 = isNaN(c) ? 64 : c & 63
+      result += BASE64_CHARS.charAt(idx1) + BASE64_CHARS.charAt(idx2)
+        + BASE64_CHARS.charAt(idx3) + BASE64_CHARS.charAt(idx4)
+    }
+    return result
+  } catch {
+    return str
+  }
+}
+
+function base64Decode(str: string): string {
+  try {
+    let bytes = ''
+    let i = 0
+    while (i < str.length) {
+      const idx1 = BASE64_CHARS.indexOf(str.charAt(i++))
+      const idx2 = BASE64_CHARS.indexOf(str.charAt(i++))
+      const idx3 = BASE64_CHARS.indexOf(str.charAt(i++))
+      const idx4 = BASE64_CHARS.indexOf(str.charAt(i++))
+      if (idx1 === -1 || idx2 === -1) break
+      bytes += String.fromCharCode((idx1 << 2) | (idx2 >> 4))
+      if (idx3 !== 64) {
+        bytes += String.fromCharCode(((idx2 & 15) << 4) | (idx3 >> 2))
+        if (idx4 !== 64) {
+          bytes += String.fromCharCode(((idx3 & 3) << 6) | idx4)
+        }
+      }
+    }
+    return decodeURIComponent(bytes.split('').map((c: string) =>
+      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    ).join(''))
+  } catch {
+    return str
+  }
+}
+
+/**
+ * 简单的字符串混淆加密
+ */
+function simpleEncrypt(text: string): string {
+  try {
+    let result = ''
+    for (let i = 0; i < text.length; i++) {
+      const charCode = text.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length)
+      result += String.fromCharCode(charCode)
+    }
+    // Base64 编码
+    return base64Encode(result)
+  } catch (error) {
+    console.error('[Crypto] 加密失败', error)
+    return text
+  }
+}
+
+/**
+ * 简单的字符串解密
+ */
+function simpleDecrypt(encrypted: string): string {
+  try {
+    // Base64 解码
+    const text = base64Decode(encrypted)
+    
+    let result = ''
+    for (let i = 0; i < text.length; i++) {
+      const charCode = text.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length)
+      result += String.fromCharCode(charCode)
+    }
+    return result
+  } catch (error) {
+    console.error('[Crypto] 解密失败', error)
+    return encrypted
+  }
+}
+
+/**
+ * 加密数据并存储
+ */
+export function setEncryptedStorage(key: string, data: any): boolean {
+  try {
+    const jsonString = JSON.stringify(data)
+    const encrypted = simpleEncrypt(jsonString)
+    wx.setStorageSync(key, encrypted)
+    console.log('[Crypto] 数据加密存储成功', key)
+    return true
+  } catch (error) {
+    console.error('[Crypto] 加密存储失败', error)
+    // 降级到明文存储
+    try {
+      wx.setStorageSync(key, data)
+      return true
+    } catch {
+      return false
+    }
+  }
+}
+
+/**
+ * 读取并解密数据
+ */
+export function getEncryptedStorage(key: string): any {
+  try {
+    const encrypted = wx.getStorageSync(key)
+    if (!encrypted) {
+      return null
+    }
+    
+    // 尝试解密
+    try {
+      const decrypted = simpleDecrypt(encrypted)
+      return JSON.parse(decrypted)
+    } catch {
+      // 可能是明文存储的数据，直接返回
+      return encrypted
+    }
+  } catch (error) {
+    console.error('[Crypto] 读取解密数据失败', error)
+    return null
+  }
+}
+
+/**
+ * 生成数据哈希（用于校验数据完整性）
+ */
+export function generateDataHash(data: any): string {
+  const jsonString = JSON.stringify(data)
+  let hash = 0
+  for (let i = 0; i < jsonString.length; i++) {
+    const char = jsonString.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash
+  }
+  return hash.toString(36)
+}

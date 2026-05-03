@@ -1,0 +1,213 @@
+<view class="container">
+  <view class="header">
+    <view class="back-btn" bindtap="goBack">
+      <text class="back-icon">‹</text>
+    </view>
+  </view>
+
+  <view class="form-container">
+    <!-- 已登录状态 -->
+    <view wx:if="{{userInfo}}">
+      <!-- 用户信息卡片 -->
+      <view class="section">
+        <view class="section-body user-info-section">
+          <view class="user-avatar-wrapper">
+            <image class="user-avatar" src="{{userInfo.avatarUrl || '/images/me.png'}}" mode="aspectFill" />
+          </view>
+          <view class="user-details">
+            <view class="user-name">{{userInfo.nickName || userInfo.username}}</view>
+            <view class="user-uid" wx:if="{{userInfo.username}}">@{{userInfo.username}}</view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 功能设置卡片 -->
+      <view class="section">
+        <view class="section-header">
+          <view class="section-icon">
+            <text class="icon-text">⚙️</text>
+          </view>
+          <text class="section-title">功能设置</text>
+        </view>
+        <view class="section-body">
+          <view class="menu-list">
+            <view class="menu-item" bindtap="goToBackup">
+              <view class="item-left">
+                <text class="menu-icon">📦</text>
+                <text class="menu-text">数据备份</text>
+              </view>
+              <view class="item-arrow">›</view>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 退出按钮 -->
+      <view class="action-section">
+        <button class="action-btn danger" bindtap="handleLogout">
+          🚪 退出登录
+        </button>
+      </view>
+    </view>
+
+    <!-- 未登录 - 登录表单 -->
+    <view class="form" wx:elif="{{mode === 'login' && !userInfo}}">
+      <view class="form-title">登录账号</view>
+
+      <view class="form-group">
+        <view class="input-wrapper">
+          <text class="input-icon">👤</text>
+          <input 
+            class="form-input" 
+            placeholder="请输入用户名" 
+            value="{{loginForm.username}}"
+            bindinput="onLoginInput"
+            data-field="username"
+            maxlength="20"
+          />
+        </view>
+      </view>
+
+      <view class="form-group">
+        <view class="input-wrapper">
+          <text class="input-icon">🔒</text>
+          <input 
+            class="form-input" 
+            placeholder="请输入密码" 
+            password="{{!showPassword}}"
+            value="{{loginForm.password}}"
+            bindinput="onLoginInput"
+            data-field="password"
+            maxlength="50"
+          />
+          <view class="toggle-password" bindtap="togglePassword">
+            <text>{{showPassword ? '🙈' : '👁️'}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="form-options">
+        <view class="remember-password">
+          <checkbox 
+            checked="{{loginForm.rememberPassword}}"
+            bindchange="onRememberPasswordChange"
+            color="#34d399"
+          />
+          <text class="option-text">记住密码</text>
+        </view>
+      </view>
+
+      <button 
+        class="submit-btn" 
+        bindtap="handleLogin" 
+        loading="{{loading}}"
+        disabled="{{loading}}"
+      >
+        {{loading ? '登录中...' : '登录'}}
+      </button>
+
+      <view class="form-footer">
+        <text class="footer-text">还没有账号？</text>
+        <text class="footer-link" bindtap="toggleMode">立即注册</text>
+      </view>
+    </view>
+
+    <!-- 注册表单 -->
+    <view class="form" wx:if="{{mode === 'register'}}">
+      <view class="form-title">创建账号</view>
+
+      <view class="form-group">
+        <view class="input-wrapper">
+          <text class="input-icon">👤</text>
+          <input 
+            class="form-input" 
+            placeholder="请输入用户名（3-20个字符）" 
+            value="{{registerForm.username}}"
+            bindinput="onRegisterInput"
+            data-field="username"
+            maxlength="20"
+          />
+        </view>
+      </view>
+
+      <view class="form-group">
+        <view class="input-wrapper">
+          <text class="input-icon">🔒</text>
+          <input 
+            class="form-input" 
+            placeholder="请输入密码（至少6个字符）" 
+            password="{{!showPassword}}"
+            value="{{registerForm.password}}"
+            bindinput="onRegisterInput"
+            data-field="password"
+            maxlength="50"
+          />
+          <view class="toggle-password" bindtap="togglePassword">
+            <text>{{showPassword ? '🙈' : '👁️'}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="form-group">
+        <view class="input-wrapper">
+          <text class="input-icon">✅</text>
+          <input 
+            class="form-input" 
+            placeholder="请再次输入密码" 
+            password="{{!showPassword}}"
+            value="{{registerForm.confirmPassword}}"
+            bindinput="onRegisterInput"
+            data-field="confirmPassword"
+            maxlength="50"
+          />
+        </view>
+      </view>
+
+      <view class="form-group">
+        <view class="input-wrapper">
+          <text class="input-icon">😊</text>
+          <input 
+            class="form-input" 
+            placeholder="请输入昵称（可选）" 
+            value="{{registerForm.nickName}}"
+            bindinput="onRegisterInput"
+            data-field="nickName"
+            maxlength="20"
+          />
+        </view>
+      </view>
+
+      <view class="form-group">
+        <view class="input-wrapper" bindtap="chooseAvatar">
+          <text class="input-icon">📷</text>
+          <view class="avatar-input-label">点击选择头像（可选）</view>
+          <view class="avatar-preview">
+            <image 
+              wx:if="{{registerForm.avatarUrl}}" 
+              class="preview-avatar" 
+              src="{{registerForm.avatarUrl}}" 
+              mode="aspectFill"
+            />
+            <view wx:else class="avatar-preview-icon">
+              <text>😊</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <button 
+        class="submit-btn" 
+        bindtap="handleRegister" 
+        loading="{{loading}}"
+        disabled="{{loading}}"
+      >
+        {{loading ? '注册中...' : '注册'}}
+      </button>
+
+      <view class="form-footer">
+        <text class="footer-text">已有账号？</text>
+        <text class="footer-link" bindtap="toggleMode">立即登录</text>
+      </view>
+    </view>
+  </view>
+</view>
