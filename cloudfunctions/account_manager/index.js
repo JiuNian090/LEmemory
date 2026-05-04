@@ -46,6 +46,7 @@ exports.main = async (event, context) => {
           passwordSalt: salt,
           nickName: nickName || username,
           avatarUrl: avatarUrl || '',
+          passwordVersion: 1,
           createTime: new Date(),
           lastLoginTime: new Date()
         }
@@ -92,6 +93,7 @@ exports.main = async (event, context) => {
           username: user.username,
           nickName: user.nickName,
           avatarUrl: user.avatarUrl,
+          passwordVersion: user.passwordVersion || 1,
           createTime: user.createTime,
           lastLoginTime: new Date()
         },
@@ -128,6 +130,7 @@ exports.main = async (event, context) => {
           username: user.username,
           nickName: user.nickName,
           avatarUrl: user.avatarUrl,
+          passwordVersion: user.passwordVersion || 1,
           createTime: user.createTime,
           lastLoginTime: user.lastLoginTime
         }
@@ -159,6 +162,7 @@ exports.main = async (event, context) => {
           username: user.username,
           nickName: nickName !== undefined ? nickName : user.nickName,
           avatarUrl: avatarUrl !== undefined ? avatarUrl : user.avatarUrl,
+          passwordVersion: user.passwordVersion || 1,
           createTime: user.createTime,
           lastLoginTime: user.lastLoginTime
         }
@@ -183,14 +187,20 @@ exports.main = async (event, context) => {
       }
 
       const { hash, salt } = hashPassword(newPassword)
+      const newVersion = (user.passwordVersion || 1) + 1
       await db.collection('users').doc(user._id).update({
         data: {
           passwordHash: hash,
-          passwordSalt: salt
+          passwordSalt: salt,
+          passwordVersion: newVersion
         }
       })
 
-      return { success: true, message: '密码修改成功' }
+      return {
+        success: true,
+        message: '密码修改成功，请重新登录',
+        passwordVersion: newVersion
+      }
     }
 
     return { success: false, error: '未知操作' }

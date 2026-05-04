@@ -96,7 +96,7 @@ export interface SyncStatus {
 
 export interface IAppOption {
   globalData: {
-    userInfo: WechatMiniprogram.UserInfo | null
+    userInfo: User | null
   }
   userInfoReadyCallback?: WechatMiniprogram.GetUserProfileSuccessCallbackResult
 }

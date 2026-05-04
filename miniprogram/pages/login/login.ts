@@ -6,6 +6,7 @@ const app = getApp<IAppOption>()
 interface LoginPageData {
   mode: 'login' | 'register'
   userInfo: any
+  loginAction: string
   loginForm: {
     username: string
     password: string
@@ -26,6 +27,7 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
   data: {
     mode: 'login',
     userInfo: null,
+    loginAction: '',
     loginForm: {
       username: '',
       password: '',
@@ -42,9 +44,12 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
     showPassword: false
   },
 
-  onLoad() {
+  onLoad(options: Record<string, string | undefined>) {
+    this.setData({ loginAction: options.action || '' })
     this.loadUserInfo()
-    this.loadSavedCredentials()
+    if (options.action !== 'new') {
+      this.loadSavedCredentials()
+    }
   },
 
   /**
@@ -66,11 +71,12 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
    */
   loadSavedCredentials() {
     try {
-      const savedCredentials = wx.getStorageSync('savedCredentials')
-      if (savedCredentials && savedCredentials.rememberPassword) {
+      const savedAccounts = wx.getStorageSync('savedAccounts') || []
+      if (savedAccounts.length > 0) {
+        const latest = savedAccounts[0]
         this.setData({
-          'loginForm.username': savedCredentials.username,
-          'loginForm.password': savedCredentials.password,
+          'loginForm.username': latest.username,
+          'loginForm.password': latest.password,
           'loginForm.rememberPassword': true
         })
       }
@@ -257,15 +263,26 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
       const loginResult = result as { success: boolean; user?: any; error?: string }
 
       if (loginResult.success) {
-        // 保存凭据（如果选择记住密码）
         if (loginForm.rememberPassword) {
-          wx.setStorageSync('savedCredentials', {
-            username: loginForm.username.trim(),
+          const username = loginForm.username.trim()
+          const savedAccounts = wx.getStorageSync('savedAccounts') || []
+          const existingIndex = savedAccounts.findIndex(
+            (a: any) => a.username === username
+          )
+          const accountEntry = {
+            username,
             password: loginForm.password,
-            rememberPassword: true
-          })
-        } else {
-          wx.removeStorageSync('savedCredentials')
+            nickName: loginResult.user?.nickName || username,
+            avatarUrl: loginResult.user?.avatarUrl || '',
+            lastLoginTime: Date.now()
+          }
+          if (existingIndex >= 0) {
+            savedAccounts[existingIndex] = accountEntry
+          } else {
+            savedAccounts.unshift(accountEntry)
+          }
+          savedAccounts.sort((a: any, b: any) => b.lastLoginTime - a.lastLoginTime)
+          wx.setStorageSync('savedAccounts', savedAccounts)
         }
 
         // 保存用户信息
@@ -293,7 +310,11 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
         })
 
         setTimeout(() => {
-          wx.navigateBack()
+          if (this.data.loginAction === 'new') {
+            wx.switchTab({ url: '/pages/mine/mine' })
+          } else {
+            wx.navigateBack()
+          }
         }, 1500)
       } else {
         wx.showToast({

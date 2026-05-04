@@ -8,6 +8,8 @@ interface SettingsPageData {
   avatarUrl: string
   showNickNameModal: boolean
   showPasswordModal: boolean
+  showSwitchSheet: boolean
+  savedAccounts: any[]
   newNickName: string
   oldPassword: string
   newPassword: string
@@ -24,6 +26,8 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
     avatarUrl: '',
     showNickNameModal: false,
     showPasswordModal: false,
+    showSwitchSheet: false,
+    savedAccounts: [],
     newNickName: '',
     oldPassword: '',
     newPassword: '',
@@ -39,6 +43,7 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
 
   onShow() {
     this.loadUserInfo()
+    this.loadSavedAccounts()
   },
 
   loadUserInfo() {
@@ -63,6 +68,15 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
     }
   },
 
+  loadSavedAccounts() {
+    try {
+      const savedAccounts = wx.getStorageSync('savedAccounts') || []
+      this.setData({ savedAccounts })
+    } catch (err) {
+      console.warn('[Settings] 加载已保存账号失败', err)
+    }
+  },
+
   chooseAvatar() {
     wx.chooseMedia({
       count: 1,
@@ -78,6 +92,9 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
 
   async updateAvatar(filePath: string) {
     this.setData({ loading: true })
+
+    let cloudSuccess = false
+    let avatarUrl = ''
     try {
       const cloudPath = `avatars/${this.data.userInfo._openid}_${Date.now()}.jpg`
       const uploadResult = await wx.cloud.uploadFile({
@@ -85,7 +102,7 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
         filePath
       })
 
-      const avatarUrl = uploadResult.fileID
+      avatarUrl = uploadResult.fileID
 
       const { result } = await wx.cloud.callFunction({
         name: 'account_manager',
@@ -95,25 +112,41 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
         }
       })
 
-      const updateResult = result as { success: boolean; error?: string }
-      if (updateResult.success) {
-        const updatedUserInfo = { ...this.data.userInfo, avatarUrl }
-        app.globalData.userInfo = updatedUserInfo
-        wx.setStorageSync('userInfo', updatedUserInfo)
+      const updateResult = result as { success: boolean; error?: string; user?: any }
+      if (updateResult.success && updateResult.user) {
+        const serverUser = updateResult.user
+        app.globalData.userInfo = serverUser
+        wx.setStorageSync('userInfo', serverUser)
         this.setData({
-          userInfo: updatedUserInfo,
-          avatarUrl
+          userInfo: serverUser,
+          avatarUrl: serverUser.avatarUrl || ''
         })
         wx.showToast({ title: '头像更新成功', icon: 'success' })
+        cloudSuccess = true
       } else {
-        wx.showToast({ title: updateResult.error || '更新失败', icon: 'none' })
+        console.warn('[Settings] 云函数返回失败，降级本地保存', updateResult.error)
       }
     } catch (err) {
-      console.error('[Settings] 更新头像失败', err)
-      wx.showToast({ title: '更新失败，请稍后重试', icon: 'none' })
-    } finally {
-      this.setData({ loading: false })
+      console.warn('[Settings] 头像上传异常，降级本地保存', err)
     }
+
+    if (!cloudSuccess && avatarUrl) {
+      const localUser = {
+        ...this.data.userInfo,
+        avatarUrl
+      }
+      app.globalData.userInfo = localUser
+      wx.setStorageSync('userInfo', localUser)
+      this.setData({
+        userInfo: localUser,
+        avatarUrl
+      })
+      wx.showToast({ title: '头像已保存（本地）', icon: 'success' })
+    } else if (!cloudSuccess) {
+      wx.showToast({ title: '头像更新失败', icon: 'none' })
+    }
+
+    this.setData({ loading: false })
   },
 
   showNickNameEdit() {
@@ -142,36 +175,54 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
       return
     }
 
+    const trimmedName = newNickName.trim()
     this.setData({ loading: true })
+
+    let cloudSuccess = false
     try {
       const { result } = await wx.cloud.callFunction({
         name: 'account_manager',
         data: {
           action: 'updateProfile',
-          nickName: newNickName.trim()
+          nickName: trimmedName
         }
       })
 
-      const updateResult = result as { success: boolean; error?: string }
-      if (updateResult.success) {
-        const updatedUserInfo = { ...this.data.userInfo, nickName: newNickName.trim() }
-        app.globalData.userInfo = updatedUserInfo
-        wx.setStorageSync('userInfo', updatedUserInfo)
+      const updateResult = result as { success: boolean; error?: string; user?: any }
+      if (updateResult.success && updateResult.user) {
+        const serverUser = updateResult.user
+        app.globalData.userInfo = serverUser
+        wx.setStorageSync('userInfo', serverUser)
         this.setData({
-          userInfo: updatedUserInfo,
-          nickName: newNickName.trim(),
+          userInfo: serverUser,
+          nickName: serverUser.nickName || '',
           showNickNameModal: false
         })
         wx.showToast({ title: '昵称修改成功', icon: 'success' })
+        cloudSuccess = true
       } else {
-        wx.showToast({ title: updateResult.error || '修改失败', icon: 'none' })
+        console.warn('[Settings] 云函数返回失败，降级本地保存', updateResult.error)
       }
     } catch (err) {
-      console.error('[Settings] 修改昵称失败', err)
-      wx.showToast({ title: '修改失败，请稍后重试', icon: 'none' })
-    } finally {
-      this.setData({ loading: false })
+      console.warn('[Settings] 云函数调用异常，降级本地保存', err)
     }
+
+    if (!cloudSuccess) {
+      const localUser = {
+        ...this.data.userInfo,
+        nickName: trimmedName
+      }
+      app.globalData.userInfo = localUser
+      wx.setStorageSync('userInfo', localUser)
+      this.setData({
+        userInfo: localUser,
+        nickName: trimmedName,
+        showNickNameModal: false
+      })
+      wx.showToast({ title: '昵称已保存（本地）', icon: 'success' })
+    }
+
+    this.setData({ loading: false })
   },
 
   showPasswordEdit() {
@@ -207,6 +258,85 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
     this.setData({ showNewPassword: !this.data.showNewPassword })
   },
 
+  showSwitchAccount() {
+    this.loadSavedAccounts()
+    this.setData({ showSwitchSheet: true })
+  },
+
+  hideSwitchSheet() {
+    this.setData({ showSwitchSheet: false })
+  },
+
+  async switchToAccount(e: any) {
+    const { username, password } = e.currentTarget.dataset
+    if (!username || !password) return
+
+    this.setData({ showSwitchSheet: false })
+    wx.showToast({ title: '正在切换...', icon: 'none', duration: 800 })
+
+    try {
+      const { result } = await wx.cloud.callFunction({
+        name: 'account_manager',
+        data: {
+          action: 'login',
+          username,
+          password
+        }
+      })
+
+      const loginResult = result as { success: boolean; error?: string; user?: any }
+      if (loginResult.success && loginResult.user) {
+        const serverUser = loginResult.user
+        app.globalData.userInfo = serverUser
+        wx.setStorageSync('userInfo', serverUser)
+        this.setData({
+          userInfo: serverUser,
+          nickName: serverUser.nickName || '',
+          avatarUrl: serverUser.avatarUrl || ''
+        })
+        this.updateSavedAccountTimestamp(username, serverUser)
+        wx.showToast({ title: '切换成功', icon: 'success' })
+      } else {
+        wx.showToast({ title: loginResult.error || '切换失败', icon: 'none' })
+      }
+    } catch (err) {
+      console.error('[Settings] 切换账号失败', err)
+      wx.showToast({ title: '切换失败，请稍后重试', icon: 'none' })
+    }
+  },
+
+  updateSavedAccountTimestamp(username: string, user: any) {
+    try {
+      const savedAccounts = wx.getStorageSync('savedAccounts') || []
+      const idx = savedAccounts.findIndex((a: any) => a.username === username)
+      if (idx >= 0) {
+        savedAccounts[idx].lastLoginTime = Date.now()
+        savedAccounts[idx].nickName = user.nickName || savedAccounts[idx].nickName
+        savedAccounts[idx].avatarUrl = user.avatarUrl || savedAccounts[idx].avatarUrl
+        savedAccounts.sort((a: any, b: any) => b.lastLoginTime - a.lastLoginTime)
+        wx.setStorageSync('savedAccounts', savedAccounts)
+        this.setData({ savedAccounts })
+      }
+    } catch (err) {
+      console.warn('[Settings] 更新账号时间戳失败', err)
+    }
+  },
+
+  confirmSwitchAccount() {
+    this.setData({ showSwitchSheet: false })
+
+    app.globalData.userInfo = null
+    try {
+      wx.removeStorageSync('userInfo')
+    } catch (err) {
+      console.warn('[Settings] 清除用户信息失败', err)
+    }
+
+    wx.reLaunch({
+      url: '/pages/login/login?action=new'
+    })
+  },
+
   async savePassword() {
     const { oldPassword, newPassword, confirmPassword } = this.data
 
@@ -238,10 +368,27 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
         }
       })
 
-      const updateResult = result as { success: boolean; error?: string }
+      const updateResult = result as { success: boolean; error?: string; passwordVersion?: number }
       if (updateResult.success) {
         this.setData({ showPasswordModal: false })
-        wx.showToast({ title: '密码修改成功', icon: 'success' })
+        wx.showToast({
+          title: '密码修改成功，请重新登录',
+          icon: 'success',
+          duration: 2000
+        })
+
+        setTimeout(() => {
+          app.globalData.userInfo = null
+          try {
+            wx.removeStorageSync('userInfo')
+            wx.removeStorageSync('rememberedAccount')
+          } catch (err) {
+            console.warn('[Settings] 清除缓存失败', err)
+          }
+          wx.reLaunch({
+            url: '/pages/login/login'
+          })
+        }, 2000)
       } else {
         wx.showToast({ title: updateResult.error || '修改失败', icon: 'none' })
       }

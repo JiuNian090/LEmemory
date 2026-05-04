@@ -50,6 +50,15 @@
             <text class="item-arrow">›</text>
           </view>
         </view>
+        <view class="menu-item" bindtap="showSwitchAccount">
+          <view class="item-left">
+            <text class="menu-icon">🔄</text>
+            <text class="menu-text">切换账号</text>
+          </view>
+          <view class="item-right">
+            <text class="item-arrow">›</text>
+          </view>
+        </view>
       </view>
     </view>
   </view>
@@ -61,69 +70,109 @@
   </view>
 </view>
 
-<view class="modal-mask" wx:if="{{showNickNameModal}}" bindtap="hideNickNameModal">
-  <view class="modal-content" catchtap="">
-    <view class="modal-title">修改昵称</view>
-    <view class="modal-body">
-      <input
-        class="modal-input"
-        placeholder="请输入新昵称"
-        value="{{newNickName}}"
-        bindinput="onNickNameInput"
-        maxlength="20"
-      />
-    </view>
-    <view class="modal-footer">
-      <view class="modal-btn cancel" bindtap="hideNickNameModal">取消</view>
-      <view class="modal-btn confirm" bindtap="saveNickName">保存</view>
-    </view>
+<view class="sheet-mask {{showNickNameModal ? 'sheet-mask--show' : ''}}" bindtap="hideNickNameModal"></view>
+<view class="sheet-panel {{showNickNameModal ? 'sheet-panel--show' : ''}}">
+  <view class="sheet-handle"></view>
+  <view class="sheet-title">修改昵称</view>
+  <view class="sheet-body">
+    <input
+      class="sheet-input"
+      placeholder="请输入新昵称"
+      value="{{newNickName}}"
+      bindinput="onNickNameInput"
+      maxlength="20"
+      focus="{{showNickNameModal}}"
+    />
+  </view>
+  <view class="sheet-footer">
+    <view class="sheet-btn sheet-btn--cancel" bindtap="hideNickNameModal">取消</view>
+    <view class="sheet-btn sheet-btn--confirm" bindtap="saveNickName">保存</view>
   </view>
 </view>
 
-<view class="modal-mask" wx:if="{{showPasswordModal}}" bindtap="hidePasswordModal">
-  <view class="modal-content" catchtap="">
-    <view class="modal-title">修改密码</view>
-    <view class="modal-body">
-      <view class="password-field">
-        <input
-          class="modal-input"
-          placeholder="当前密码"
-          password="{{!showOldPassword}}"
-          value="{{oldPassword}}"
-          bindinput="onOldPasswordInput"
-          maxlength="50"
-        />
-        <view class="toggle-pwd" bindtap="toggleOldPassword">
-          <text>{{showOldPassword ? '🙈' : '👁️'}}</text>
-        </view>
-      </view>
-      <view class="password-field">
-        <input
-          class="modal-input"
-          placeholder="新密码（至少6个字符）"
-          password="{{!showNewPassword}}"
-          value="{{newPassword}}"
-          bindinput="onNewPasswordInput"
-          maxlength="50"
-        />
-        <view class="toggle-pwd" bindtap="toggleNewPassword">
-          <text>{{showNewPassword ? '🙈' : '👁️'}}</text>
-        </view>
-      </view>
-      <view class="password-field">
-        <input
-          class="modal-input"
-          placeholder="确认新密码"
-          password="{{!showNewPassword}}"
-          value="{{confirmPassword}}"
-          bindinput="onConfirmPasswordInput"
-          maxlength="50"
-        />
+<view class="sheet-mask {{showPasswordModal ? 'sheet-mask--show' : ''}}" bindtap="hidePasswordModal"></view>
+<view class="sheet-panel {{showPasswordModal ? 'sheet-panel--show' : ''}}">
+  <view class="sheet-handle"></view>
+  <view class="sheet-title">修改密码</view>
+  <view class="sheet-body">
+    <view class="sheet-pwd-field">
+      <input
+        class="sheet-input"
+        placeholder="当前密码"
+        password="{{!showOldPassword}}"
+        value="{{oldPassword}}"
+        bindinput="onOldPasswordInput"
+        maxlength="50"
+        focus="{{showPasswordModal}}"
+      />
+      <view class="sheet-pwd-toggle" bindtap="toggleOldPassword">
+        <text>{{showOldPassword ? '🙈' : '👁️'}}</text>
       </view>
     </view>
-    <view class="modal-footer">
-      <view class="modal-btn cancel" bindtap="hidePasswordModal">取消</view>
-      <view class="modal-btn confirm" bindtap="savePassword">保存</view>
+    <view class="sheet-pwd-field">
+      <input
+        class="sheet-input"
+        placeholder="新密码（至少6个字符）"
+        password="{{!showNewPassword}}"
+        value="{{newPassword}}"
+        bindinput="onNewPasswordInput"
+        maxlength="50"
+      />
+      <view class="sheet-pwd-toggle" bindtap="toggleNewPassword">
+        <text>{{showNewPassword ? '🙈' : '👁️'}}</text>
+      </view>
     </view>
+    <view class="sheet-pwd-field">
+      <input
+        class="sheet-input"
+        placeholder="确认新密码"
+        password="{{!showNewPassword}}"
+        value="{{confirmPassword}}"
+        bindinput="onConfirmPasswordInput"
+        maxlength="50"
+      />
+    </view>
+  </view>
+  <view class="sheet-footer">
+    <view class="sheet-btn sheet-btn--cancel" bindtap="hidePasswordModal">取消</view>
+    <view class="sheet-btn sheet-btn--confirm" bindtap="savePassword">保存</view>
+  </view>
+</view>
+
+<view class="sheet-mask {{showSwitchSheet ? 'sheet-mask--show' : ''}}" bindtap="hideSwitchSheet"></view>
+<view class="sheet-panel {{showSwitchSheet ? 'sheet-panel--show' : ''}}">
+  <view class="sheet-handle"></view>
+  <view class="sheet-title">切换账号</view>
+  <view class="sheet-body">
+    <block wx:if="{{savedAccounts.length > 0}}">
+      <view class="account-list">
+        <view
+          class="account-item {{item.username === userInfo.username ? 'account-item--active' : ''}}"
+          wx:for="{{savedAccounts}}"
+          wx:key="username"
+          data-username="{{item.username}}"
+          data-password="{{item.password}}"
+          bindtap="switchToAccount"
+        >
+          <image class="account-avatar" src="{{item.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
+          <view class="account-info">
+            <text class="account-nickname">{{item.nickName || item.username}}</text>
+            <text class="account-username">@{{item.username}}</text>
+          </view>
+          <view class="account-badge" wx:if="{{item.username === userInfo.username}}">当前</view>
+        </view>
+      </view>
+      <view class="sheet-footer">
+        <view class="sheet-btn sheet-btn--cancel" bindtap="hideSwitchSheet">取消</view>
+        <view class="sheet-btn sheet-btn--danger" bindtap="confirmSwitchAccount">登录其他账号</view>
+      </view>
+    </block>
+    <block wx:else>
+      <view class="sheet-confirm-text">暂无已保存的账号</view>
+      <view class="sheet-footer">
+        <view class="sheet-btn sheet-btn--cancel" bindtap="hideSwitchSheet">取消</view>
+        <view class="sheet-btn sheet-btn--danger" bindtap="confirmSwitchAccount">登录新账号</view>
+      </view>
+    </block>
   </view>
 </view>
