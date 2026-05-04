@@ -720,39 +720,26 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     try {
       wx.showLoading({ title: '删除中...' })
 
-      const cardRes = await cardCollection.where({
-        groupId: this.data.groupId
-      }).get()
-      for (const card of cardRes.data as any[]) {
-        if (card._id) {
-          await cardCollection.doc(card._id).remove()
-        }
+      const groupId = this.data.groupId
+      if (!groupId) {
+        wx.showToast({ title: '卡牌组ID无效', icon: 'none' })
+        return
       }
 
-      const favRes = await favoriteCollection.where({
-        groupId: this.data.groupId
-      }).get()
-      for (const fav of favRes.data as any[]) {
-        if (fav._id) {
-          await favoriteCollection.doc(fav._id).remove()
-        }
-      }
+      const collections = [
+        cardCollection,
+        favoriteCollection,
+        studyRecordCollection,
+        cardGroupCollection
+      ]
 
-      const studyRes = await studyRecordCollection.where({
-        groupId: this.data.groupId
-      }).get()
-      for (const record of studyRes.data as any[]) {
-        if (record._id) {
-          await studyRecordCollection.doc(record._id).remove()
-        }
-      }
-
-      const groupRes = await cardGroupCollection.where({
-        groupId: this.data.groupId
-      }).get()
-      for (const group of groupRes.data as any[]) {
-        if (group._id) {
-          await cardGroupCollection.doc(group._id).remove()
+      for (const collection of collections) {
+        const res = await collection.where({ groupId }).get()
+        for (const item of res.data as any[]) {
+          const idToUse = item._id || item.cardId || item.recordId || item.favoriteId || item.groupId
+          if (idToUse) {
+            await collection.doc(idToUse).remove()
+          }
         }
       }
 
@@ -761,7 +748,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
         icon: 'success'
       })
 
-      console.log('[CardDetail] 删除卡牌组成功', this.data.groupId)
+      console.log('[CardDetail] 删除卡牌组成功', groupId)
 
       setTimeout(() => {
         wx.navigateBack()

@@ -254,8 +254,8 @@ class DualCollection {
       try {
         const result = await this.cloudCollection.get()
         return result
-      } catch (err) {
-        console.warn(`[DB] 云端读取 ${this.key} 失败，降级到本地`, err)
+      } catch (_) {
+        // 云端集合可能尚未创建，静默降级到本地
       }
     }
     return this.getLocal().get()
@@ -296,15 +296,38 @@ class DualQuery {
   }
 
   async get(): Promise<{ data: any[] }> {
+    let cloudData: any[] = []
+    let cloudFailed = false
+
     if (this.cloudQuery) {
       try {
         const result = await this.cloudQuery.get()
-        return result
-      } catch (err) {
-        console.warn(`[DB] 云端查询 ${this.key} 失败，降级到本地`, err)
+        cloudData = result.data || []
+      } catch (_) {
+        cloudFailed = true
       }
     }
-    return new LocalQuery(this.key, this.query).get()
+
+    const { data: localData } = await new LocalQuery(this.key, this.query).get()
+
+    if (!this.cloudQuery && !cloudFailed) {
+      return { data: localData }
+    }
+
+    const businessKeys = BUSINESS_KEYS[this.key] || []
+    const primaryKey = businessKeys[0]
+    const merged = [...cloudData]
+    const existingIds = new Set(cloudData.map(item => primaryKey ? item[primaryKey] : item._id))
+
+    for (const localItem of localData) {
+      const id = primaryKey ? localItem[primaryKey] : localItem._id
+      if (id && !existingIds.has(id)) {
+        merged.push(localItem)
+        existingIds.add(id)
+      }
+    }
+
+    return { data: merged }
   }
 
   orderBy(field: string, order: string): DualQuery {
@@ -313,6 +336,15 @@ class DualQuery {
     }
     return this
   }
+}
+
+const BUSINESS_KEYS: Record<string, string[]> = {
+  cardGroups: ['groupId'],
+  cards: ['cardId'],
+  studyRecords: ['recordId'],
+  favorites: ['favoriteId'],
+  users: ['username'],
+  backups: ['backupId']
 }
 
 class DualDoc {
@@ -326,15 +358,53 @@ class DualDoc {
     this.cloudCollection = cloudCollection
   }
 
-  async update({ data }: { data: any }): Promise<any> {
-    const localDoc = new LocalDoc(this.key, this.id)
-    await localDoc.update({ data })
+  private async fetchDocData(): Promise<any | null> {
+    // 先尝试从云端获取
     if (this.cloudCollection) {
       try {
         const { data: cloudDocs } = await this.cloudCollection
-          .where({
-            _id: this.id
-          })
+          .where({ _id: this.id })
+          .limit(1)
+          .get()
+        if (cloudDocs.length > 0) return cloudDocs[0]
+      } catch (_) {}
+    }
+    // 降级本地
+    try {
+      const { data: localDoc } = await new LocalDoc(this.key, this.id).get()
+      if (localDoc) return localDoc
+    } catch (_) {}
+    return null
+  }
+
+  private removeLocalByAllIds(docData: any): void {
+    const localDoc = new LocalDoc(this.key, this.id)
+    localDoc.remove()
+
+    if (docData) {
+      const keys = BUSINESS_KEYS[this.key] || []
+      for (const k of keys) {
+        if (docData[k]) {
+          new LocalDoc(this.key, docData[k]).remove()
+        }
+      }
+    }
+  }
+
+  async update({ data }: { data: any }): Promise<any> {
+    const docData = await this.fetchDocData()
+    this.removeLocalByAllIds(docData)
+    // 重新写入更新后的数据到本地
+    if (docData) {
+      const merged = { ...docData, ...data, updateTime: new Date() }
+      const items = getLocalStorageData(this.key)
+      items.push(merged)
+      setLocalStorageData(this.key, items)
+    }
+    if (this.cloudCollection) {
+      try {
+        const { data: cloudDocs } = await this.cloudCollection
+          .where({ _id: this.id })
           .limit(1)
           .get()
         if (cloudDocs.length > 0) {
@@ -349,14 +419,12 @@ class DualDoc {
   }
 
   async remove(): Promise<any> {
-    const localDoc = new LocalDoc(this.key, this.id)
-    await localDoc.remove()
+    const docData = await this.fetchDocData()
+    this.removeLocalByAllIds(docData)
     if (this.cloudCollection) {
       try {
         const { data: cloudDocs } = await this.cloudCollection
-          .where({
-            _id: this.id
-          })
+          .where({ _id: this.id })
           .limit(1)
           .get()
         if (cloudDocs.length > 0) {
@@ -374,28 +442,29 @@ class DualDoc {
     if (this.cloudCollection) {
       try {
         const { data: cloudDocs } = await this.cloudCollection
-          .where({
-            _id: this.id
-          })
+          .where({ _id: this.id })
           .limit(1)
           .get()
         if (cloudDocs.length > 0) return { data: cloudDocs[0] }
-      } catch (err) {
-        console.warn(`[DB] 云端读取文档 ${this.key} 失败`, err)
+      } catch (_) {
+        // 静默降级到本地
       }
     }
     return new LocalDoc(this.key, this.id).get()
   }
 
   async set(options: { data: any }): Promise<any> {
-    const localDoc = new LocalDoc(this.key, this.id)
-    await localDoc.set(options)
+    const docData = await this.fetchDocData()
+    this.removeLocalByAllIds(docData)
+    if (options.data) {
+      const items = getLocalStorageData(this.key)
+      items.push({ ...options.data, _id: this.id, updateTime: new Date() })
+      setLocalStorageData(this.key, items)
+    }
     if (this.cloudCollection) {
       try {
         const { data: cloudDocs } = await this.cloudCollection
-          .where({
-            _id: this.id
-          })
+          .where({ _id: this.id })
           .limit(1)
           .get()
         if (cloudDocs.length > 0) {
