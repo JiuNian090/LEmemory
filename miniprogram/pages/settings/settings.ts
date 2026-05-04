@@ -1,4 +1,5 @@
 import { IAppOption } from '../../utils/types'
+import { syncManager } from '../../utils/sync'
 
 const app = getApp<IAppOption>()
 
@@ -322,16 +323,9 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
     }
   },
 
-  confirmSwitchAccount() {
+  async confirmSwitchAccount() {
     this.setData({ showSwitchSheet: false })
-
-    app.globalData.userInfo = null
-    try {
-      wx.removeStorageSync('userInfo')
-    } catch (err) {
-      console.warn('[Settings] 清除用户信息失败', err)
-    }
-
+    await syncManager.onLogout()
     wx.reLaunch({
       url: '/pages/login/login?action=new'
     })

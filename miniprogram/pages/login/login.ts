@@ -297,10 +297,7 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
 
         // 同步数据
         wx.showLoading({ title: '同步数据...' })
-        const syncResult = await syncManager.linkAccountAndSync({
-          nickName: userInfo.nickName,
-          avatarUrl: userInfo.avatarUrl
-        })
+        const syncResult = await syncManager.linkAccountAndSync()
         wx.hideLoading()
 
         wx.showToast({
@@ -425,21 +422,12 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
   handleLogout() {
     wx.showModal({
       title: '退出登录',
-      content: '确定要退出当前账号吗？',
-      confirmColor: '#f87171',
+      content: '确定要退出当前账号吗？本地数据将被清除，云端数据保留。',
+      confirmColor: '#f56c6c',
       success: async (res) => {
         if (res.confirm) {
-          // 清除用户信息
-          app.globalData.userInfo = null
-          this.setData({
-            userInfo: null
-          })
-          
-          try {
-            wx.removeStorageSync('userInfo')
-          } catch (err) {
-            console.error('[LoginPage] 清除用户信息失败', err)
-          }
+          await syncManager.onLogout()
+          this.setData({ userInfo: null })
 
           wx.showToast({
             title: '已退出登录',

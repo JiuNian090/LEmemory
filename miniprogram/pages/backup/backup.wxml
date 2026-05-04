@@ -88,7 +88,10 @@
           data-backup="{{ item }}"
         >
           <view class="backup-header">
-            <text class="backup-time">{{ item.backupTime.toLocaleString() }}</text>
+            <view class="backup-time-row">
+              <text class="backup-time">{{ item.backupTime.toLocaleString() }}</text>
+              <text class="cloud-badge">☁️ 云端</text>
+            </view>
             <view class="backup-actions">
               <button class="mini-btn restore-btn" bindtap="onRestoreBackup" data-backup="{{ item }}">恢复</button>
               <button class="mini-btn delete-btn" bindtap="deleteBackup" data-backup="{{ item }}">删除</button>

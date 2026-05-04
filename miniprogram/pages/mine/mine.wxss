@@ -178,10 +178,6 @@ page {
 }
 
 .weui-btn_warn {
-  background-color: #fa5151;
+  background-color: #f56c6c;
   color: #ffffff;
-}
-
-.weui-btn_warn:active {
-  background-color: #de4848;
 }

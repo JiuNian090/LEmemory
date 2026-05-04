@@ -1,4 +1,5 @@
 import { IAppOption } from '../../utils/types'
+import { syncManager } from '../../utils/sync'
 
 const app = getApp<IAppOption>()
 
@@ -60,22 +61,12 @@ Page<MinePageData, WechatMiniprogram.IAnyObject>({
   handleLogout() {
     wx.showModal({
       title: '退出登录',
-      content: '确定要退出当前账号吗？',
-      confirmColor: '#f87171',
-      success: (res) => {
+      content: '确定要退出当前账号吗？本地数据将被清除，云端数据保留。',
+      confirmColor: '#f56c6c',
+      success: async (res) => {
         if (res.confirm) {
-          // 清除用户信息
-          app.globalData.userInfo = null
-          this.setData({
-            userInfo: null
-          })
-          
-          // 保留记住密码的信息，只清除用户登录状态
-          try {
-            wx.removeStorageSync('userInfo')
-          } catch (err) {
-            console.error('[MinePage] 清除用户信息失败', err)
-          }
+          await syncManager.onLogout()
+          this.setData({ userInfo: null })
 
           wx.showToast({
             title: '已退出登录',
@@ -98,6 +89,22 @@ Page<MinePageData, WechatMiniprogram.IAnyObject>({
   goToSettings() {
     wx.navigateTo({
       url: '/pages/settings/settings'
+    })
+  },
+
+  openCustomerService() {
+    (wx as any).openCustomerServiceChat({
+      extInfo: { url: '' },
+      success: () => {
+        console.log('[Mine] 打开客服成功')
+      },
+      fail: (err: any) => {
+        console.warn('[Mine] 打开客服失败', err)
+        wx.showToast({
+          title: '打开客服失败',
+          icon: 'none'
+        })
+      }
     })
   }
 })

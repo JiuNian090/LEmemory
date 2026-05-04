@@ -4,77 +4,42 @@ import {
   exportAllLocalData,
   importLocalData,
   updateSyncStatus,
-  userCollection,
-  cardGroupCollection,
-  cardCollection,
-  studyRecordCollection,
-  favoriteCollection,
   getLocalStorageData,
   setLocalStorageData,
-  getStorageInfo
+  getStorageInfo,
+  downloadCloudToLocal,
+  uploadAllLocalToCloud
 } from './db'
-import type { BackupData, BackupRecord, CardGroup, Card, StudyRecord, Favorite } from './types'
+import type { BackupData, BackupRecord } from './types'
+import { IAppOption } from './types'
 
+const app = getApp<IAppOption>()
 const BACKUP_STORAGE_KEY = 'backup_records'
 
-/**
- * 同步管理器
- */
 class SyncManager {
 
   /**
    * 登录后执行账号关联和数据同步
+   * 策略：云端为主，下载到本地覆盖
    */
-  async linkAccountAndSync(userInfo: { nickName?: string; avatarUrl?: string } = {}): Promise<{
+  async linkAccountAndSync(): Promise<{
     success: boolean
     message: string
     syncedCount: number
   }> {
     console.log('[Sync] 开始账号关联和数据同步')
-    
+
     try {
-      // 检查云开发是否可用
       const userId = await getUserId()
       if (userId === 'local_user') {
-        return {
-          success: false,
-          message: '云开发不可用，请检查网络连接',
-          syncedCount: 0
-        }
+        return { success: false, message: '云开发不可用，请检查网络连接', syncedCount: 0 }
       }
 
       updateSyncStatus({ isSyncing: true })
 
-      // 1. 检查云端是否已有数据
-      const hasCloudData = await this.checkCloudData(userId)
-      
-      // 2. 获取本地数据
-      const localData = exportAllLocalData()
-      const hasLocalData = this.hasData(localData)
+      // 登录时：从云端下载所有数据到本地
+      const syncedCount = await downloadCloudToLocal(userId)
 
-      let syncedCount = 0
-
-      if (!hasCloudData && hasLocalData) {
-        // 云端无数据，本地有数据：上传本地数据到云端
-        console.log('[Sync] 云端无数据，上传本地数据')
-        syncedCount = await this.uploadLocalDataToCloud(localData, userId, userInfo)
-      } else if (hasCloudData && !hasLocalData) {
-        // 云端有数据，本地无数据：下载云端数据到本地
-        console.log('[Sync] 本地无数据，下载云端数据')
-        syncedCount = await this.downloadCloudDataToLocal(userId)
-      } else if (hasCloudData && hasLocalData) {
-        // 两端都有数据：合并策略（以本地为主，避免覆盖）
-        console.log('[Sync] 两端都有数据，执行智能合并')
-        syncedCount = await this.mergeAndSyncData(localData, userId, userInfo)
-      } else {
-        // 两端都无数据
-        console.log('[Sync] 两端都无数据')
-      }
-
-      // 更新用户信息
-      await this.updateUserInfo(userId, userInfo)
-
-      // 更新同步状态
       updateSyncStatus({
         isSyncing: false,
         lastSyncTime: new Date(),
@@ -84,7 +49,7 @@ class SyncManager {
 
       return {
         success: true,
-        message: syncedCount > 0 ? `同步完成，共处理 ${syncedCount} 条数据` : '数据已是最新',
+        message: syncedCount > 0 ? `已从云端恢复 ${syncedCount} 条数据` : '云端暂无数据',
         syncedCount
       }
 
@@ -99,212 +64,46 @@ class SyncManager {
         message: '同步失败：' + (error instanceof Error ? error.message : '未知错误'),
         syncedCount: 0
       }
-    } finally {
     }
   }
 
   /**
-   * 检查云端是否有数据
+   * 退出登录：清除所有本地数据
    */
-  private async checkCloudData(userId: string): Promise<boolean> {
+  async onLogout(): Promise<void> {
+    console.log('[Sync] 退出登录，清除本地数据')
     try {
-      const { data } = await cardGroupCollection.where({ userId }).limit(1).get()
-      return data.length > 0
-    } catch {
-      return false
-    }
-  }
-
-  /**
-   * 检查是否有数据
-   */
-  private hasData(data: BackupData): boolean {
-    return data.cardGroups.length > 0 ||
-           data.cards.length > 0 ||
-           data.studyRecords.length > 0 ||
-           data.favorites.length > 0
-  }
-
-  /**
-   * 上传本地数据到云端
-   */
-  private async uploadLocalDataToCloud(
-    localData: BackupData,
-    userId: string,
-    _userInfo: any
-  ): Promise<number> {
-    let count = 0
-
-    // 上传卡牌组
-    for (const group of localData.cardGroups) {
-      await cardGroupCollection.add({
-        data: {
-          ...group,
-          userId,
-          _openid: userId,
-          syncStatus: 'synced'
-        }
-      })
-      count++
-    }
-
-    // 上传卡牌
-    for (const card of localData.cards) {
-      await cardCollection.add({
-        data: {
-          ...card,
-          userId,
-          _openid: userId,
-          syncStatus: 'synced'
-        }
-      })
-      count++
-    }
-
-    // 上传学习记录
-    for (const record of localData.studyRecords) {
-      await studyRecordCollection.add({
-        data: {
-          ...record,
-          userId,
-          _openid: userId,
-          syncStatus: 'synced'
-        }
-      })
-      count++
-    }
-
-    // 上传收藏
-    for (const favorite of localData.favorites) {
-      await favoriteCollection.add({
-        data: {
-          ...favorite,
-          userId,
-          _openid: userId,
-          syncStatus: 'synced'
-        }
-      })
-      count++
-    }
-
-    return count
-  }
-
-  /**
-   * 下载云端数据到本地
-   */
-  private async downloadCloudDataToLocal(userId: string): Promise<number> {
-    // 从云端获取所有数据
-    const [
-      { data: cardGroups },
-      { data: cards },
-      { data: studyRecords },
-      { data: favorites }
-    ] = await Promise.all([
-      cardGroupCollection.where({ userId }).get(),
-      cardCollection.where({ userId }).get(),
-      studyRecordCollection.where({ userId }).get(),
-      favoriteCollection.where({ userId }).get()
-    ])
-
-    // 导入到本地
-    importLocalData({
-      version: '1.0',
-      backupTime: new Date(),
-      userId,
-      cardGroups: cardGroups as CardGroup[],
-      cards: cards as Card[],
-      studyRecords: studyRecords as StudyRecord[],
-      favorites: favorites as Favorite[]
-    })
-
-    return cardGroups.length + cards.length + studyRecords.length + favorites.length
-  }
-
-  /**
-   * 合并并同步数据
-   */
-  private async mergeAndSyncData(
-    localData: BackupData,
-    userId: string,
-    _userInfo: any
-  ): Promise<number> {
-    // 简单策略：只上传本地新增的（以 groupId/cardId 为标识）
-    // 获取云端现有ID
-    const { data: cloudGroups } = await cardGroupCollection.where({ userId }).get()
-    const cloudGroupIds = new Set(cloudGroups.map((g: any) => g.groupId))
-
-    let count = 0
-
-    // 上传本地新增的卡牌组
-    for (const group of localData.cardGroups) {
-      if (!cloudGroupIds.has(group.groupId)) {
-        await cardGroupCollection.add({
-          data: {
-            ...group,
-            userId,
-            _openid: userId,
-            syncStatus: 'synced'
-          }
-        })
-        count++
+      const userId = await getUserId()
+      if (userId !== 'local_user') {
+        await uploadAllLocalToCloud(userId)
+        console.log('[Sync] 本地数据已同步至云端')
       }
+    } catch (err) {
+      console.warn('[Sync] 退出时同步云端失败', err)
     }
 
-    // 上传卡牌（关联到已存在或新上传的组）
-    const { data: cloudCards } = await cardCollection.where({ userId }).get()
-    const cloudCardIds = new Set(cloudCards.map((c: any) => c.cardId))
-
-    for (const card of localData.cards) {
-      if (!cloudCardIds.has(card.cardId)) {
-        await cardCollection.add({
-          data: {
-            ...card,
-            userId,
-            _openid: userId,
-            syncStatus: 'synced'
-          }
-        })
-        count++
-      }
-    }
-
-    return count
-  }
-
-  /**
-   * 更新用户信息
-   */
-  private async updateUserInfo(userId: string, userInfo: any): Promise<void> {
+    // 清除所有本地存储
     try {
-      const { data: users } = await userCollection.where({ _openid: userId }).limit(1).get()
-      
-      if (users.length > 0) {
-        // 更新现有用户
-        await userCollection.doc(users[0]._id).update({
-          data: {
-            ...userInfo,
-            lastSyncTime: new Date()
-          }
-        })
-      } else {
-        // 创建新用户
-        await userCollection.add({
-          data: {
-            _openid: userId,
-            ...userInfo,
-            createTime: new Date(),
-            lastSyncTime: new Date()
-          }
-        })
-      }
-    } catch (error) {
-      console.error('[Sync] 更新用户信息失败', error)
+      wx.clearStorageSync()
+    } catch (err) {
+      console.error('[Sync] 清除本地数据失败', err)
     }
+
+    // 恢复记住的账号
+    try {
+      const preserved = wx.getStorageSync('saved_accounts_preserve')
+      if (preserved) {
+        wx.setStorageSync('savedAccounts', preserved)
+        wx.removeStorageSync('saved_accounts_preserve')
+      }
+    } catch (_) {}
+
+    app.globalData.userInfo = null
+    console.log('[Sync] 退出登录完成')
   }
 
   /**
-   * 手动备份数据到云端
+   * 在云端创建备份节点
    */
   async createBackup(description?: string): Promise<{
     success: boolean
@@ -314,10 +113,7 @@ class SyncManager {
     try {
       const userId = await getUserId()
       if (userId === 'local_user') {
-        return {
-          success: false,
-          message: '需要先登录才能备份'
-        }
+        return { success: false, message: '需要先登录才能备份' }
       }
 
       wx.showLoading({ title: '备份中...' })
@@ -327,70 +123,107 @@ class SyncManager {
       const dataSize = dataJson.length
 
       const backupId = generateId()
-      const backupRecord: BackupRecord = {
+
+      // 1. 上传到云端备份集合
+      try {
+        const { result } = await wx.cloud.callFunction({
+          name: 'backup_manager',
+          data: {
+            action: 'create',
+            backupId,
+            description: description || '',
+            backupData: localData,
+            dataSize,
+            cardGroupsCount: localData.cardGroups.length,
+            cardsCount: localData.cards.length,
+            studyRecordsCount: localData.studyRecords.length,
+            favoritesCount: localData.favorites.length
+          }
+        })
+        const createResult = result as { success: boolean; error?: string }
+        if (!createResult.success) {
+          wx.hideLoading()
+          return { success: false, message: createResult.error || '云端备份失败' }
+        }
+      } catch (err) {
+        console.warn('[Sync] 云端备份失败，降级本地', err)
+      }
+
+      // 2. 本地也存一份副本
+      const backups = getLocalStorageData(BACKUP_STORAGE_KEY)
+      backups.push({
         backupId,
         userId,
-        backupTime: new Date(),
+        backupTime: new Date().toISOString(),
         dataSize,
-        description,
+        description: description || '',
         cardGroupsCount: localData.cardGroups.length,
         cardsCount: localData.cards.length,
         studyRecordsCount: localData.studyRecords.length,
-        favoritesCount: localData.favorites.length
-      }
-
-      const backups = getLocalStorageData(BACKUP_STORAGE_KEY)
-      backups.push({
-        ...backupRecord,
+        favoritesCount: localData.favorites.length,
         backupData: localData
       })
-      setLocalStorageData(BACKUP_STORAGE_KEY, backups)
+      setLocalStorageData(BACKUP_STORAGE_KEY, backups.slice(-30))
 
       wx.hideLoading()
 
-      return {
-        success: true,
-        message: '备份成功',
-        backupId
-      }
+      return { success: true, message: '备份成功', backupId }
 
     } catch (error) {
       wx.hideLoading()
       console.error('[Sync] 备份失败', error)
-      return {
-        success: false,
-        message: '备份失败：' + (error instanceof Error ? error.message : '未知错误')
-      }
+      return { success: false, message: '备份失败：' + (error instanceof Error ? error.message : '未知错误') }
     }
   }
 
   /**
-   * 获取备份列表
+   * 获取备份列表（优先云端）
    */
   async getBackupList(): Promise<BackupRecord[]> {
     try {
       const userId = await getUserId()
-      if (userId === 'local_user') {
-        return []
+      if (userId === 'local_user') return []
+
+      // 优先从云端获取
+      try {
+        const { result } = await wx.cloud.callFunction({
+          name: 'backup_manager',
+          data: { action: 'list' }
+        })
+        const listResult = result as { success: boolean; data?: any[] }
+        if (listResult.success && listResult.data) {
+          return listResult.data.map((item: any) => ({
+            backupId: item.backupId,
+            userId: item.userId || userId,
+            backupTime: new Date(item.backupTime),
+            dataSize: item.dataSize,
+            description: item.description,
+            cardGroupsCount: item.cardGroupsCount,
+            cardsCount: item.cardsCount,
+            studyRecordsCount: item.studyRecordsCount,
+            favoritesCount: item.favoritesCount
+          }))
+        }
+      } catch (err) {
+        console.warn('[Sync] 云端获取备份列表失败，降级本地', err)
       }
 
+      // 降级到本地
       const backups = getLocalStorageData(BACKUP_STORAGE_KEY)
-      const userBackups = backups
-        .filter((item: any) => item.userId === userId || item._openid === userId)
+      return backups
+        .filter((item: any) => item.userId === userId)
         .sort((a: any, b: any) => new Date(b.backupTime).getTime() - new Date(a.backupTime).getTime())
-        .slice(0, 20)
-
-      return userBackups.map((item: any) => ({
-        backupId: item.backupId,
-        userId: item.userId,
-        backupTime: new Date(item.backupTime),
-        dataSize: item.dataSize,
-        description: item.description,
-        cardGroupsCount: item.cardGroupsCount,
-        cardsCount: item.cardsCount,
-        studyRecordsCount: item.studyRecordsCount,
-        favoritesCount: item.favoritesCount
-      }))
+        .map((item: any) => ({
+          backupId: item.backupId,
+          userId: item.userId,
+          backupTime: new Date(item.backupTime),
+          dataSize: item.dataSize,
+          description: item.description,
+          cardGroupsCount: item.cardGroupsCount,
+          cardsCount: item.cardsCount,
+          studyRecordsCount: item.studyRecordsCount,
+          favoritesCount: item.favoritesCount
+        }))
     } catch (error) {
       console.error('[Sync] 获取备份列表失败', error)
       return []
@@ -398,7 +231,8 @@ class SyncManager {
   }
 
   /**
-   * 从备份恢复数据
+   * 从备份节点快速恢复数据
+   * 流程：云端下载备份 → 导入本地 → 同步到云端数据表
    */
   async restoreFromBackup(backupId: string): Promise<{
     success: boolean
@@ -407,61 +241,88 @@ class SyncManager {
     try {
       const userId = await getUserId()
       if (userId === 'local_user') {
-        return {
-          success: false,
-          message: '需要先登录才能恢复备份'
-        }
+        return { success: false, message: '需要先登录才能恢复备份' }
       }
 
       wx.showLoading({ title: '恢复中...' })
 
-      const backups = getLocalStorageData(BACKUP_STORAGE_KEY)
-      const found = backups.find((item: any) =>
-        item.backupId === backupId && (item.userId === userId || item._openid === userId)
-      )
+      let backupData: BackupData | null = null
 
-      if (!found) {
-        wx.hideLoading()
-        return {
-          success: false,
-          message: '备份不存在'
+      // 1. 从云端获取备份数据
+      try {
+        const { result } = await wx.cloud.callFunction({
+          name: 'backup_manager',
+          data: { action: 'get', backupId }
+        })
+        const getResult = result as { success: boolean; data?: any; error?: string }
+        if (getResult.success && getResult.data) {
+          backupData = getResult.data.backupData as BackupData
+        }
+      } catch (err) {
+        console.warn('[Sync] 云端获取备份失败，尝试本地', err)
+      }
+
+      // 2. 降级到本地
+      if (!backupData) {
+        const backups = getLocalStorageData(BACKUP_STORAGE_KEY)
+        const found = backups.find((item: any) =>
+          item.backupId === backupId && item.userId === userId
+        )
+        if (found) {
+          backupData = found.backupData as BackupData
         }
       }
 
-      importLocalData(found.backupData as BackupData)
+      if (!backupData) {
+        wx.hideLoading()
+        return { success: false, message: '备份不存在' }
+      }
+
+      // 3. 导入到本地
+      importLocalData(backupData)
+
+      // 4. 同步到云端数据表
+      try {
+        const count = await uploadAllLocalToCloud(userId)
+        console.log(`[Sync] 恢复后同步 ${count} 条数据到云端`)
+      } catch (err) {
+        console.warn('[Sync] 恢复后同步云端失败', err)
+      }
 
       wx.hideLoading()
 
-      return {
-        success: true,
-        message: '恢复成功'
-      }
+      return { success: true, message: '恢复成功，数据已同步至云端' }
 
     } catch (error) {
       wx.hideLoading()
       console.error('[Sync] 恢复失败', error)
-      return {
-        success: false,
-        message: '恢复失败：' + (error instanceof Error ? error.message : '未知错误')
-      }
+      return { success: false, message: '恢复失败：' + (error instanceof Error ? error.message : '未知错误') }
     }
   }
 
   /**
-   * 删除备份
+   * 删除备份（云端+本地）
    */
   async deleteBackup(backupId: string): Promise<boolean> {
     try {
       const userId = await getUserId()
-      if (userId === 'local_user') {
-        return false
+      if (userId === 'local_user') return false
+
+      // 删除云端
+      try {
+        await wx.cloud.callFunction({
+          name: 'backup_manager',
+          data: { action: 'delete', backupId }
+        })
+      } catch (err) {
+        console.warn('[Sync] 云端删除备份失败', err)
       }
 
+      // 删除本地
       const backups = getLocalStorageData(BACKUP_STORAGE_KEY)
       const filtered = backups.filter((item: any) =>
-        !(item.backupId === backupId && (item.userId === userId || item._openid === userId))
+        !(item.backupId === backupId && item.userId === userId)
       )
-
       if (filtered.length !== backups.length) {
         setLocalStorageData(BACKUP_STORAGE_KEY, filtered)
       }
@@ -481,5 +342,4 @@ class SyncManager {
   }
 }
 
-// 导出单例
 export const syncManager = new SyncManager()

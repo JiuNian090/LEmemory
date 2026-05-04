@@ -229,10 +229,24 @@ page {
   margin-bottom: 16rpx;
 }
 
+.backup-time-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
 .backup-time {
   font-size: 30rpx;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.cloud-badge {
+  font-size: 22rpx;
+  color: #60a5fa;
+  background: #eff6ff;
+  padding: 2rpx 12rpx;
+  border-radius: 8rpx;
 }
 
 .backup-actions {
