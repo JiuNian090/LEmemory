@@ -82,25 +82,77 @@
   line-height: 1;
 }
 
-.card-grid {
+.card-list {
   display: flex;
   flex-direction: column;
   gap: 24rpx;
   padding: 0 30rpx;
 }
 
-.card-item {
+/* 左滑删除 - 触摸事件方案 */
+.swipe-item {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24rpx;
+  height: 150rpx;
+}
+
+.swipe-content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
   background: var(--card-bg);
   border-radius: 24rpx;
+  transition: transform 0.25s ease;
+  box-shadow: var(--shadow);
+}
+
+.swipe-item.swiped .swipe-content {
+  transform: translateX(-160rpx);
+}
+
+.card-item {
   padding: 30rpx;
   display: flex;
   align-items: center;
-  box-shadow: var(--shadow);
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .card-item:active {
   transform: scale(0.98);
   box-shadow: var(--shadow-hover);
+}
+
+/* 删除按钮（隐藏于右侧） */
+.swipe-delete-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 160rpx;
+  height: 100%;
+  z-index: 1;
+  background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  border-radius: 0 24rpx 24rpx 0;
+}
+
+.delete-icon {
+  font-size: 40rpx;
+}
+
+.delete-text {
+  font-size: 26rpx;
+  color: #ffffff;
+  font-weight: 500;
 }
 
 .card-icon {

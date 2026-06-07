@@ -1,4 +1,4 @@
-import { cardCollection, cardGroupCollection, favoriteCollection, studyRecordCollection, generateId } from '../../utils/db'
+import { cardCollection, favoriteCollection, studyRecordCollection, generateId, deleteCardGroup } from '../../utils/db'
 import { parseDate } from '../../utils/time'
 import { showErrorToast } from '../../utils/error'
 
@@ -833,31 +833,15 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   },
 
   async doDeleteCardGroup() {
+    const groupId = this.data.groupId
+    if (!groupId) {
+      wx.showToast({ title: '卡牌组ID无效', icon: 'none' })
+      return
+    }
+
     try {
       wx.showLoading({ title: '删除中...' })
-
-      const groupId = this.data.groupId
-      if (!groupId) {
-        wx.showToast({ title: '卡牌组ID无效', icon: 'none' })
-        return
-      }
-
-      const collections = [
-        cardCollection,
-        favoriteCollection,
-        studyRecordCollection,
-        cardGroupCollection
-      ]
-
-      for (const collection of collections) {
-        const res = await collection.where({ groupId }).get()
-        for (const item of res.data as any[]) {
-          const idToUse = item._id || item.cardId || item.recordId || item.favoriteId || item.groupId
-          if (idToUse) {
-            await collection.doc(idToUse).remove()
-          }
-        }
-      }
+      await deleteCardGroup(groupId)
 
       wx.showToast({
         title: '删除成功',

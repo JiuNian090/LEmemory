@@ -489,6 +489,70 @@ export const studyRecordCollection = new DualCollection('studyRecords')
 export const favoriteCollection = new DualCollection('favorites')
 export const backupCollection = new DualCollection('backups')
 
+// ==================== 统一删除卡牌组 ====================
+
+const DELETE_COLLECTIONS = [
+  { localKey: 'cardGroups', cloudName: 'cardGroups' },
+  { localKey: 'cards', cloudName: 'cards' },
+  { localKey: 'favorites', cloudName: 'favorites' },
+  { localKey: 'studyRecords', cloudName: 'studyRecords' }
+]
+
+/**
+ * 从本地和云端删除指定 groupId 的所有数据（卡牌组、卡牌、收藏、学习记录）
+ * 直接操作存储层，绕开 DualCollection 的封装，确保数据真正删除
+ */
+export async function deleteCardGroup(groupId: string): Promise<void> {
+  if (!groupId) throw new Error('groupId 不能为空')
+
+  const errors: string[] = []
+
+  // 1. 先删除本地数据（直接操作存储）
+  for (const { localKey } of DELETE_COLLECTIONS) {
+    try {
+      const items = getLocalStorageData(localKey)
+      const filtered = items.filter((item: any) => item.groupId !== groupId)
+      setLocalStorageData(localKey, filtered)
+    } catch (err) {
+      const msg = `本地删除 ${localKey} 失败`
+      console.error(`[DB] ${msg}`, err)
+      errors.push(msg)
+    }
+  }
+
+  // 2. 再删除云端数据（直接操作云 API）
+  initDB()
+  if (isCloudReady()) {
+    for (const { cloudName } of DELETE_COLLECTIONS) {
+      try {
+        const collection = cloudDb.collection(cloudName)
+        let hasMore = true
+        while (hasMore) {
+          const { data } = await collection.where({ groupId }).limit(100).get()
+          if (data.length === 0) {
+            hasMore = false
+            break
+          }
+          const ids = data.map((item: any) => item._id)
+          await collection.doc(ids[0]).remove()
+          for (let i = 1; i < ids.length; i++) {
+            await collection.doc(ids[i]).remove()
+          }
+          if (data.length < 100) hasMore = false
+        }
+      } catch (err) {
+        const msg = `云端删除 ${cloudName} 失败`
+        console.warn(`[DB] ${msg}`, err)
+        // 云端删除失败不阻塞，可能集合尚未创建
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`删除卡牌组部分失败: ${errors.join('; ')}`)
+  }
+}
+
 // ==================== 用户身份 ====================
 
 export async function getUserId(): Promise<string> {
