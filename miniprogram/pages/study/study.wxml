@@ -60,7 +60,7 @@
     </block>
     <block wx:else>
       <view class="empty-state">
-        <image class="empty-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
+        <image class="empty-icon" src="/images/book.png" mode="aspectFit"></image>
         <view class="empty-text">暂无卡牌组</view>
         <view class="empty-desc">点击上方按钮开始创建</view>
       </view>

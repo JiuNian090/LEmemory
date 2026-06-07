@@ -176,7 +176,7 @@
       </view>
 
       <view wx:if="{{!isStudying && cards.length === 0}}" class="empty-state">
-        <image class="empty-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
+        <image class="empty-icon" src="/images/book.png" mode="aspectFit"></image>
         <view class="empty-text">暂无卡牌</view>
         <view class="empty-desc">切换到"卡牌"标签页添加</view>
       </view>
@@ -194,7 +194,7 @@
         </view>
       </block>
       <view wx:else class="empty-state">
-        <image class="empty-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
+        <image class="empty-icon" src="/images/book.png" mode="aspectFit"></image>
         <view class="empty-text">暂无卡牌</view>
       </view>
     </view>
@@ -241,7 +241,7 @@
         </view>
       </block>
       <view wx:else class="empty-state">
-        <image class="empty-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
+        <image class="empty-icon" src="/images/book.png" mode="aspectFit"></image>
         <view class="empty-text">暂无卡牌</view>
         <view class="empty-desc">点击上方按钮添加</view>
       </view>
@@ -265,7 +265,7 @@
         </view>
       </block>
       <view wx:else class="empty-state">
-        <image class="empty-icon" src="/images/graduation-hat-2.png" mode="aspectFit"></image>
+        <image class="empty-icon" src="/images/book.png" mode="aspectFit"></image>
         <view class="empty-text">暂无收藏</view>
         <view class="empty-desc">在"卡牌"标签页收藏喜欢的卡牌</view>
       </view>

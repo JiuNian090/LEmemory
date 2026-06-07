@@ -1,5 +1,4 @@
 import { syncManager } from '../../utils/sync'
-import { syncEngine } from '../../utils/syncEngine'
 import { IAppOption } from '../../utils/types'
 
 const app = getApp<IAppOption>()

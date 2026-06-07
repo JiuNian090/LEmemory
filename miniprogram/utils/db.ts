@@ -74,17 +74,6 @@ export function updateSyncStatus(status: Partial<SyncStatus>): void {
   setEncryptedStorage(STORAGE_KEYS.SYNC_STATUS, newStatus)
 }
 
-function getPendingSync(): any[] {
-  return getLocalStorageData(STORAGE_KEYS.PENDING_SYNC)
-}
-
-function addPendingSync(item: any): void {
-  const pending = getPendingSync()
-  pending.push({ ...item, addedTime: new Date().toISOString() })
-  setLocalStorageData(STORAGE_KEYS.PENDING_SYNC, pending)
-  updateSyncStatus({ pendingItems: pending.length })
-}
-
 // ==================== 生成唯一ID ====================
 
 export function generateId(): string {
