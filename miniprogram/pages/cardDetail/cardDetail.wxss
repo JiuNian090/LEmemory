@@ -45,8 +45,8 @@
 }
 
 .tab-item.active {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-  color: #fff;
+  background: var(--header-gradient);
+  color: var(--header-text);
   font-weight: 600;
   box-shadow: 0 4rpx 12rpx rgba(52, 211, 153, 0.3);
 }
@@ -170,7 +170,7 @@
 .btn-text {
   font-size: 32rpx;
   font-weight: 600;
-  color: #fff;
+  color: var(--header-text);
 }
 
 .study-hint {
@@ -672,11 +672,13 @@
 }
 
 .card-text {
+  display: block;
   font-size: 34rpx;
   color: var(--text-primary);
   text-align: center;
   line-height: 1.6;
   font-weight: 500;
+  white-space: pre-wrap;
 }
 
 .card-hint {
@@ -759,13 +761,13 @@
 
 .add-icon {
   font-size: 36rpx;
-  color: #fff;
+  color: var(--header-text);
   font-weight: 300;
 }
 
 .add-text {
   font-size: 28rpx;
-  color: #fff;
+  color: var(--header-text);
   font-weight: 600;
 }
 
@@ -801,7 +803,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--header-text);
   font-size: 22rpx;
   font-weight: 600;
   margin-right: 16rpx;
@@ -820,9 +822,11 @@
 }
 
 .catalog-answer {
+  display: block;
   font-size: 24rpx;
   color: var(--text-secondary);
   line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .item-header {
@@ -899,8 +903,9 @@
 .item-answer .text {
   flex: 1;
   font-size: 26rpx;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .item-answer .text {
@@ -1117,7 +1122,7 @@
 
 .btn-confirm {
   background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-  color: #fff;
+  color: var(--header-text);
 }
 
 .btn-confirm:active {

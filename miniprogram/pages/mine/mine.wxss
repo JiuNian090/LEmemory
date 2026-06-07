@@ -1,5 +1,5 @@
 page {
-  background: #f5f5f5;
+  background: var(--bg-color);
 }
 
 .container {
@@ -10,13 +10,13 @@ page {
 .user-section {
   margin: 0 30rpx 30rpx;
   border-radius: 24rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow);
   overflow: hidden;
 }
 
 .user-section .section-body {
   padding: 40rpx 30rpx;
-  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  background: var(--header-gradient);
 }
 
 .user-wrapper {
@@ -46,13 +46,13 @@ page {
 
 .user-hint {
   font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--header-text-secondary);
 }
 
 .nickname {
   font-size: 34rpx;
   font-weight: 600;
-  color: white;
+  color: var(--header-text);
 }
 
 .arrow-wrapper {
@@ -73,10 +73,10 @@ page {
 }
 
 .section {
-  background: white;
+  background: var(--card-bg);
   border-radius: 24rpx;
   margin-bottom: 30rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow);
   overflow: hidden;
 }
 
@@ -84,7 +84,7 @@ page {
   display: flex;
   align-items: center;
   padding: 30rpx;
-  border-bottom: 2rpx solid #f0f0f0;
+  border-bottom: 2rpx solid var(--border-color);
 }
 
 .section-icon {
@@ -108,7 +108,7 @@ page {
 .section-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-primary);
 }
 
 .section-body {
@@ -124,7 +124,7 @@ page {
   align-items: center;
   justify-content: space-between;
   padding: 28rpx 0;
-  border-bottom: 2rpx solid #f8f8f8;
+  border-bottom: 2rpx solid var(--border-color);
 }
 
 .menu-item:last-child {
@@ -143,12 +143,12 @@ page {
 
 .menu-text {
   font-size: 30rpx;
-  color: #1a1a1a;
+  color: var(--text-primary);
 }
 
 .item-arrow {
   font-size: 36rpx;
-  color: #ccc;
+  color: var(--text-tertiary);
   font-weight: 300;
 }
 
@@ -167,7 +167,7 @@ page {
   font-size: 36rpx;
   text-align: center;
   text-decoration: none;
-  color: #000000;
+  color: var(--text-primary);
   line-height: 96rpx;
   height: 96rpx;
   border-radius: 16rpx;
@@ -178,6 +178,6 @@ page {
 }
 
 .weui-btn_warn {
-  background-color: #f56c6c;
-  color: #ffffff;
+  background-color: var(--danger-color);
+  color: var(--header-text);
 }

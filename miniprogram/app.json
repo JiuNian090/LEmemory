@@ -1,4 +1,6 @@
 {
+  "darkmode": true,
+  "themeLocation": "theme.json",
   "pages": [
     "pages/study/study",
     "pages/cardDetail/cardDetail",
@@ -10,16 +12,17 @@
     "pages/settings/settings"
   ],
   "window": {
-    "navigationBarTextStyle": "black",
+    "navigationBarTextStyle": "@navTxtStyle",
     "navigationBarTitleText": "LEmemory",
-    "navigationBarBackgroundColor": "#ffffff",
-    "backgroundColor": "#f5f5f5"
+    "navigationBarBackgroundColor": "@navBgColor",
+    "backgroundColor": "@bgColor",
+    "backgroundTextStyle": "@bgTxtStyle"
   },
   "tabBar": {
-    "color": "#7A7E83",
-    "selectedColor": "#3cc51f",
-    "borderStyle": "black",
-    "backgroundColor": "#ffffff",
+    "color": "@tabFontColor",
+    "selectedColor": "@tabSelectedColor",
+    "borderStyle": "@tabBorderStyle",
+    "backgroundColor": "@tabBgColor",
     "list": [
       {
         "pagePath": "pages/study/study",

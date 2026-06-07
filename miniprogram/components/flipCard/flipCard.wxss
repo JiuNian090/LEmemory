@@ -26,13 +26,14 @@
   justify-content: center;
   padding: 40rpx;
   box-sizing: border-box;
-  background: #fff;
+  background: var(--card-bg);
   border-radius: 16rpx;
   font-size: 32rpx;
+  color: var(--text-primary);
   text-align: center;
 }
 
 .card-face.back {
   transform: rotateY(180deg);
-  background: #f8f8f8;
+  background: var(--bg-color);
 }

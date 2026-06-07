@@ -131,11 +131,11 @@
           <view class="study-card {{isFlipped ? 'flipped' : ''}} {{cardAnim}}">
             <view class="card-face front">
               <view class="card-label">问题</view>
-              <view class="card-text">{{cards[currentCardIndex].front}}</view>
+              <text class="card-text">{{cards[currentCardIndex].front}}</text>
             </view>
             <view class="card-face back">
               <view class="card-label">答案</view>
-              <view class="card-text">{{cards[currentCardIndex].back}}</view>
+              <text class="card-text">{{cards[currentCardIndex].back}}</text>
             </view>
           </view>
         </view>
@@ -187,7 +187,7 @@
           <view class="catalog-num">{{index + 1}}</view>
           <view class="catalog-content">
             <view class="catalog-question">{{item.front}}</view>
-            <view class="catalog-answer" wx:if="{{item.back}}">{{item.back}}</view>
+            <text class="catalog-answer" wx:if="{{item.back}}">{{item.back}}</text>
           </view>
         </view>
       </block>

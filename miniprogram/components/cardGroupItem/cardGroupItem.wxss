@@ -1,5 +1,5 @@
 .card-group-item {
-  background: #fff;
+  background: var(--card-bg);
   border-radius: 16rpx;
   padding: 30rpx;
 }
@@ -7,16 +7,17 @@
 .item-title {
   font-size: 32rpx;
   font-weight: 500;
+  color: var(--text-primary);
   margin-bottom: 10rpx;
 }
 
 .item-desc {
   font-size: 26rpx;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 10rpx;
 }
 
 .item-time {
   font-size: 24rpx;
-  color: #999;
+  color: var(--text-tertiary);
 }
