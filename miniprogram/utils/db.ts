@@ -22,13 +22,15 @@ function initDB() {
       cloudDb = wx.cloud.database()
       cloudAvailable = true
       console.log('[DB] 云开发初始化成功')
+      initialized = true
     } else {
       console.log('[DB] 云开发不可用，将使用本地存储')
+      initialized = true
     }
   } catch (err) {
+    cloudAvailable = false
     console.log('[DB] 云开发初始化失败，将使用本地存储', err)
   }
-  initialized = true
 }
 
 function isCloudReady(): boolean {
@@ -232,6 +234,7 @@ class DualCollection {
   }
 
   async get(): Promise<{ data: any[] }> {
+    if (!this.cloudCollection) this.tryInitCloudCollection()
     if (this.cloudCollection) {
       try {
         const result = await this.cloudCollection.get()
@@ -244,6 +247,7 @@ class DualCollection {
   }
 
   orderBy(field: string, order: string): DualCollection {
+    if (!this.cloudCollection) this.tryInitCloudCollection()
     if (this.cloudCollection) {
       this.cloudCollection = this.cloudCollection.orderBy(field, order)
     }
@@ -251,18 +255,29 @@ class DualCollection {
   }
 
   where(query: any): DualQuery {
+    if (!this.cloudCollection) this.tryInitCloudCollection()
     return new DualQuery(this.key, this.cloudCollection ? this.cloudCollection.where(query) : null, query)
   }
 
   doc(id: string): DualDoc {
+    if (!this.cloudCollection) this.tryInitCloudCollection()
     return new DualDoc(this.key, id, this.cloudCollection)
   }
 
   limit(n: number): DualCollection {
+    if (!this.cloudCollection) this.tryInitCloudCollection()
     if (this.cloudCollection) {
       this.cloudCollection = this.cloudCollection.limit(n)
     }
     return this
+  }
+
+  /** 懒初始化云端集合（解决模块加载时 wx.cloud.init 尚未执行的时序问题） */
+  private tryInitCloudCollection(): void {
+    initDB()
+    if (isCloudReady() && cloudDb) {
+      this.cloudCollection = cloudDb.collection(this.key)
+    }
   }
 }
 
