@@ -7,7 +7,13 @@
     "tabFontColor": "#7A7E83",
     "tabSelectedColor": "#3cc51f",
     "tabBorderStyle": "black",
-    "tabBgColor": "#ffffff"
+    "tabBgColor": "#ffffff",
+    "iconPathStudy": "images/book.png",
+    "selectedIconPathStudy": "images/book-1.png",
+    "iconPathStats": "images/status.png",
+    "selectedIconPathStats": "images/status-1.png",
+    "iconPathMine": "images/me.png",
+    "selectedIconPathMine": "images/me-1.png"
   },
   "dark": {
     "navBgColor": "#1f1f1f",
@@ -17,6 +23,12 @@
     "tabFontColor": "#7A7E83",
     "tabSelectedColor": "#34d399",
     "tabBorderStyle": "white",
-    "tabBgColor": "#262626"
+    "tabBgColor": "#262626",
+    "iconPathStudy": "images/book-2.png",
+    "selectedIconPathStudy": "images/book-1-2.png",
+    "iconPathStats": "images/status-2.png",
+    "selectedIconPathStats": "images/status-1-2.png",
+    "iconPathMine": "images/me-2.png",
+    "selectedIconPathMine": "images/me-1-2.png"
   }
 }

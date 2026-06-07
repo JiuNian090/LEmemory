@@ -26,20 +26,20 @@
     "list": [
       {
         "pagePath": "pages/study/study",
-        "iconPath": "images/graduation-hat-2.png",
-        "selectedIconPath": "images/graduation-hat.png",
+        "iconPath": "@iconPathStudy",
+        "selectedIconPath": "@selectedIconPathStudy",
         "text": "学习"
       },
       {
         "pagePath": "pages/statistics/statistics",
-        "iconPath": "images/status.png",
-        "selectedIconPath": "images/status-1.png",
+        "iconPath": "@iconPathStats",
+        "selectedIconPath": "@selectedIconPathStats",
         "text": "统计"
       },
       {
         "pagePath": "pages/mine/mine",
-        "iconPath": "images/me.png",
-        "selectedIconPath": "images/me-1.png",
+        "iconPath": "@iconPathMine",
+        "selectedIconPath": "@selectedIconPathMine",
         "text": "我的"
       }
     ]
