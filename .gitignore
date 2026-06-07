@@ -32,7 +32,10 @@ cloudfunctions/package-lock.json
 # -----------------------------------------
 .gitnexus/
 .codegraph/
-.trae/skills/
+.trae/
+CLAUDE.md 
+
+
 
 # IDE 和编辑器
 # -----------------------------------------
