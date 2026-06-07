@@ -146,21 +146,36 @@
   background: var(--border-color);
 }
 
-.start-study-btn {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+/* ========== 学习按钮组 ========== */
+.study-btn-group {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 10rpx;
+}
+
+.study-btn {
+  flex: 1;
   border-radius: 50rpx;
   padding: 30rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12rpx;
-  margin-top: 10rpx;
-  box-shadow: 0 8rpx 30rpx rgba(52, 211, 153, 0.3);
   transition: all 0.3s ease;
 }
 
-.start-study-btn:active {
+.study-btn:active {
   transform: scale(0.98);
+}
+
+.study-btn-learn {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  box-shadow: 0 8rpx 30rpx rgba(52, 211, 153, 0.3);
+}
+
+.study-btn-quiz {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  box-shadow: 0 8rpx 30rpx rgba(99, 102, 241, 0.3);
 }
 
 .btn-icon {

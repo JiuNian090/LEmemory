@@ -42,10 +42,16 @@
           </view>
         </view>
 
-        <!-- 开始学习按钮 -->
-        <view class="start-study-btn" bindtap="startStudy">
-          <text class="btn-icon">▶️</text>
-          <text class="btn-text">开始学习</text>
+        <!-- 学习按钮组 -->
+        <view class="study-btn-group">
+          <view class="study-btn study-btn-learn" bindtap="startStudy">
+            <text class="btn-icon">▶️</text>
+            <text class="btn-text">开始学习</text>
+          </view>
+          <view class="study-btn study-btn-quiz" bindtap="startQuiz">
+            <text class="btn-icon">📝</text>
+            <text class="btn-text">测验</text>
+          </view>
         </view>
 
         <!-- 快捷功能按钮 -->
@@ -65,10 +71,6 @@
           <view class="quick-action-btn clipboard-btn" bindtap="importFromClipboard">
             <text class="action-icon">📋</text>
             <text class="action-text">从剪贴板导入</text>
-          </view>
-          <view class="quick-action-btn" bindtap="startStudy">
-            <text class="action-icon">📝</text>
-            <text class="action-text">测验</text>
           </view>
         </view>
 

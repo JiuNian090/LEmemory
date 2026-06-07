@@ -56,6 +56,7 @@ interface CardDetailPageData {
   newBack: string
   favoriteCardIds: string[]
   isStudying: boolean
+  isQuiz: boolean
   todayStats: {
     toLearn: number
     toReview: number
@@ -92,6 +93,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     newBack: '',
     favoriteCardIds: [],
     isStudying: false,
+    isQuiz: false,
     todayStats: {
       toLearn: 0,
       toReview: 0,
@@ -131,6 +133,10 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
 
     if (options.studying === '1') {
       this.setData({ isStudying: true })
+    }
+    if (options.quiz === '1') {
+      this.shuffleCards()
+      this.setData({ isStudying: true, isQuiz: true })
     }
   },
 
@@ -365,6 +371,33 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   },
 
   /**
+   * 开始测验
+   */
+  startQuiz() {
+    if (this.data.cards.length === 0) {
+      wx.showToast({
+        title: '请先添加卡牌',
+        icon: 'none'
+      })
+      return
+    }
+    const url = `/pages/cardDetail/cardDetail?groupId=${this.data.groupId}&title=${encodeURIComponent(this.data.title)}&description=${encodeURIComponent(this.data.description)}&quiz=1`
+    wx.navigateTo({ url })
+  },
+
+  /**
+   * 洗牌（Fisher-Yates）
+   */
+  shuffleCards() {
+    const cards = [...this.data.cards]
+    for (let i = cards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [cards[i], cards[j]] = [cards[j], cards[i]]
+    }
+    this.setData({ cards, currentCardIndex: 0, isFlipped: false })
+  },
+
+  /**
    * 开始学习计时
    */
   startStudyTimer() {
@@ -463,12 +496,18 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   },
 
   /**
-   * 显示学习完成提示
+   * 显示学习/测验完成提示
    */
   showStudyComplete() {
+    const { isQuiz, cards } = this.data
+    const title = isQuiz ? '📝 测验完成' : '🎉 学习完成'
+    const content = isQuiz
+      ? `已完成 ${cards.length} 张卡牌的测验！`
+      : `已完成 ${cards.length} 张卡牌的学习！`
+
     wx.showModal({
-      title: '🎉 学习完成',
-      content: `已完成 ${this.data.cards.length} 张卡牌的学习！`,
+      title,
+      content,
       showCancel: false,
       confirmText: '返回',
       success: () => {
