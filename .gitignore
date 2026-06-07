@@ -34,6 +34,8 @@ cloudfunctions/package-lock.json
 .codegraph/
 .trae/
 CLAUDE.md 
+.claude/
+AGENTS.md 
 
 
 
