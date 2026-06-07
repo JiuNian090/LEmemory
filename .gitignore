@@ -1,40 +1,136 @@
-# 微信小程序开发工具
-project.private.config.json
+# ==========================================
+# 微信小程序项目 - Git Ignore 规则
+# ==========================================
 
+# -----------------------------------------
+# 微信小程序开发工具
+# -----------------------------------------
+project.private.config.json
+project.config.json.bak
+*.log
+miniprogramLog/
+editorDebug/
+
+# 微信开发者工具缓存
+微信开发者工具/
+
+# 小程序编译输出
+miniprogram/dist/
+miniprogram/unpackage/
+miniprogram/dev/
+miniprogram/build/
+
+# -----------------------------------------
 # 云函数依赖
+# -----------------------------------------
+cloudfunctions/node_modules/
+cloudfunctions/package-lock.json
 **/node_modules/
 
-# 系统文件
-.DS_Store
-Thumbs.db
+# -----------------------------------------
+# 代码分析工具缓存
+# -----------------------------------------
+.gitnexus/
+.codegraph/
+.trae/skills/
 
 # IDE 和编辑器
+# -----------------------------------------
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.vim/
+.emacs.desktop
+.desktop
 
+# -----------------------------------------
+# 系统文件
+# -----------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# -----------------------------------------
 # 日志和临时文件
+# -----------------------------------------
 *.log
 *.tmp
 *.cache
+*.temp
+*.swp
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
 
+# -----------------------------------------
 # 构建产物
+# -----------------------------------------
 dist/
 build/
+output/
+*.min.js
+*.min.css
 
-# 本地配置（包含密钥、环境变量等）
-**/.env
-**/.env.local
-**/.env.*.local
+# -----------------------------------------
+# TypeScript 和编译
+# -----------------------------------------
+*.tsbuildinfo
+*.js.map
+*.d.ts.map
+tsconfig.tsbuildinfo
 
-# 云开发敏感配置（可选，根据需要添加）
-# cloudfunctions/*/config.json （如果包含密钥信息）
-
+# -----------------------------------------
 # 测试和覆盖率
+# -----------------------------------------
 coverage/
 .nyc_output/
+*.lcov
+.vitest/
+.playwright/
 
-# TypeScript
-*.tsbuildinfo
+# -----------------------------------------
+# 环境变量和敏感配置
+# -----------------------------------------
+.env
+.env.local
+.env.*.local
+.env.production
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# -----------------------------------------
+# 云函数敏感配置
+# -----------------------------------------
+cloudfunctions/*/config.json
+cloudfunctions/*/.env
+
+# -----------------------------------------
+# 小程序本地数据
+# -----------------------------------------
+miniprogram/**/userData/
+miniprogram/**/appData/
+miniprogram/**/debug/
+*.wxapkg
+*.wxml
+!miniprogram/**/*.wxml
+
+# -----------------------------------------
+# 微信登录凭证
+# -----------------------------------------
+miniprogram/**/*session*
+miniprogram/**/*token*
+
+# -----------------------------------------
+# 其他
+# -----------------------------------------
+*.orig
+*.rej
+*.bak
+*.backup
+._*
