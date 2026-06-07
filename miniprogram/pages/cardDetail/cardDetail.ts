@@ -1,4 +1,6 @@
 import { cardCollection, cardGroupCollection, favoriteCollection, studyRecordCollection, generateId } from '../../utils/db'
+import { parseDate } from '../../utils/time'
+import { showErrorToast } from '../../utils/error'
 
 interface CardItem {
   _id?: string
@@ -38,6 +40,7 @@ interface CardDetailPageData {
   currentTab: number
   tabs: string[]
   cards: CardItem[]
+  displayCards: CardItem[]
   favorites: FavoriteItem[]
   currentCardIndex: number
   isFlipped: boolean
@@ -60,6 +63,9 @@ interface CardDetailPageData {
   totalCards: number
   studiedCards: number
   donutGradient: string
+  displayStart: number
+  displayEnd: number
+  isLoadingMore: boolean
 }
 
 Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
@@ -70,6 +76,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     currentTab: 0,
     tabs: ['学习', '目录', '卡牌', '收藏'],
     cards: [],
+    displayCards: [],
     favorites: [],
     currentCardIndex: 0,
     isFlipped: false,
@@ -96,17 +103,25 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     },
     totalCards: 0,
     studiedCards: 0,
-    donutGradient: 'conic-gradient(#d1d5db 0deg, #d1d5db 360deg)'
+    donutGradient: 'conic-gradient(#d1d5db 0deg, #d1d5db 360deg)',
+    displayStart: 0,
+    displayEnd: 10,
+    isLoadingMore: false
   },
 
+  pageSize: 10,
+
   onLoad(options: any) {
+    const title = options.title ? decodeURIComponent(options.title) : ''
+    const description = options.description ? decodeURIComponent(options.description) : ''
+    
     this.setData({
       groupId: options.groupId || '',
-      title: options.title || '',
-      description: options.description || ''
+      title: title,
+      description: description
     })
     wx.setNavigationBarTitle({
-      title: options.title || '卡牌详情'
+      title: title || '卡牌详情'
     })
     this.loadCards()
     this.loadFavorites()
@@ -134,7 +149,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   /**
    * 加载卡牌列表
    */
-  async loadCards() {
+  async loadCards(reset: boolean = true) {
     try {
       const { data } = await cardCollection.where({
         groupId: this.data.groupId
@@ -146,19 +161,65 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
         reviewCount: card.reviewCount || 0
       }))
 
-      this.setData({
-        cards,
-        totalCards: cards.length
-      })
+      if (reset) {
+        this.setData({
+          cards,
+          totalCards: cards.length,
+          displayStart: 0,
+          displayEnd: Math.min(this.pageSize, cards.length)
+        })
+        this.updateDisplayCards()
+      } else {
+        this.setData({
+          cards,
+          totalCards: cards.length
+        })
+      }
       this.calculateStats()
       await this.loadTodayStudyTime()
       console.log('[CardDetail] 加载卡牌成功', cards.length)
-    } catch (err) {
+    } catch (err: any) {
       console.error('[CardDetail] 加载卡牌失败', err)
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
+      showErrorToast(err)
+    }
+  },
+
+  /**
+   * 更新显示的卡牌（懒加载）
+   */
+  updateDisplayCards() {
+    const { cards, displayStart, displayEnd } = this.data
+    const displayCards = cards.slice(displayStart, displayEnd)
+    this.setData({ displayCards })
+  },
+
+  /**
+   * 加载更多卡牌
+   */
+  loadMoreCards() {
+    if (this.data.isLoadingMore) return
+    
+    const { cards, displayEnd } = this.data
+    if (displayEnd >= cards.length) return
+
+    this.setData({ isLoadingMore: true })
+
+    setTimeout(() => {
+      const newEnd = Math.min(displayEnd + this.pageSize, cards.length)
+      this.setData({
+        displayEnd: newEnd,
+        isLoadingMore: false
       })
+      this.updateDisplayCards()
+    }, 300)
+  },
+
+  /**
+   * 处理滚动到底部
+   */
+  onScrollToLower() {
+    if (this.data.currentTab === 2) {
+      this.loadMoreCards()
     }
   },
 
@@ -254,7 +315,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       }).get()
 
       const studiedTime = (data as any[]).reduce((sum, r) => {
-        const recordDate = new Date(r.studyDate)
+        const recordDate = parseDate(r.studyDate)
         if (recordDate >= todayStart) {
           return sum + (r.studyDuration || 0)
         }
@@ -306,6 +367,22 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   startStudyTimer() {
     this.setData({
       studyStartTime: Date.now()
+    })
+  },
+
+  /**
+   * 退出学习模式
+   */
+  exitStudy() {
+    wx.showModal({
+      title: '退出学习',
+      content: '确定要退出学习模式吗？',
+      success: (res) => {
+        if (res.confirm) {
+          this.stopStudyTimer()
+          wx.navigateBack()
+        }
+      }
     })
   },
 
@@ -377,16 +454,42 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
           this.setData({ cardAnim: '' })
         }, 300)
       }, 300)
+    } else if (this.data.currentCardIndex === this.data.cards.length - 1) {
+      this.showStudyComplete()
     }
+  },
+
+  /**
+   * 显示学习完成提示
+   */
+  showStudyComplete() {
+    wx.showModal({
+      title: '🎉 学习完成',
+      content: `已完成 ${this.data.cards.length} 张卡牌的学习！`,
+      showCancel: false,
+      confirmText: '返回',
+      success: () => {
+        this.stopStudyTimer()
+        wx.navigateBack()
+      }
+    })
   },
 
   /**
    * 翻牌
    */
   flipCard() {
+    if (this.data.cardAnim) return
+    
     this.setData({
       isFlipped: !this.data.isFlipped
     })
+    
+    if (this.data.isFlipped) {
+      wx.vibrateShort({
+        type: 'light'
+      })
+    }
   },
 
   /**
@@ -394,6 +497,22 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
    */
   async setMastery(e: WechatMiniprogram.TouchEvent) {
     const status = e.currentTarget.dataset.status as CardItem['status']
+    await this.updateMastery(status)
+  },
+
+  /**
+   * 设置掌握程度并翻到下一张
+   */
+  async setMasteryAndNext(e: WechatMiniprogram.TouchEvent) {
+    const status = e.currentTarget.dataset.status as CardItem['status']
+    await this.updateMastery(status)
+    this.nextCard()
+  },
+
+  /**
+   * 更新掌握程度（通用方法）
+   */
+  async updateMastery(status: CardItem['status']) {
     const card = this.data.cards[this.data.currentCardIndex]
     if (!card || !card._id) return
 
@@ -415,12 +534,9 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       this.calculateStats()
 
       console.log('[CardDetail] 更新掌握程度', card.cardId, status)
-    } catch (err) {
+    } catch (err: any) {
       console.error('[CardDetail] 更新掌握程度失败', err)
-      wx.showToast({
-        title: '记录失败',
-        icon: 'none'
-      })
+      showErrorToast(err)
     }
   },
 

@@ -19,7 +19,8 @@
     "lib": ["ES2020"],
     "typeRoots": [
       "./typings"
-    ]
+    ],
+    "skipLibCheck": true
   },
   "include": [
     "./**/*.ts"

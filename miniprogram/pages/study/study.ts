@@ -1,5 +1,6 @@
 import { cardGroupCollection, generateId } from '../../utils/db'
 import { formatDate } from '../../utils/time'
+import { showErrorToast } from '../../utils/error'
 
 interface CardGroupItem {
   _id?: string
@@ -160,12 +161,9 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
       
       this.closeDialog()
       this.loadCardGroups()
-    } catch (err) {
+    } catch (err: any) {
       console.error('[StudyPage] 创建卡牌组失败', err)
-      wx.showToast({
-        title: '创建失败',
-        icon: 'none'
-      })
+      showErrorToast(err)
     } finally {
       wx.hideLoading()
     }
@@ -178,7 +176,7 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
     const { groupid, title } = e.currentTarget.dataset
 
     wx.navigateTo({
-      url: `/pages/cardDetail/cardDetail?groupId=${groupid}&title=${title}`
+      url: `/pages/cardDetail/cardDetail?groupId=${groupid}&title=${encodeURIComponent(title || '')}`
     })
   },
 

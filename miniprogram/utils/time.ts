@@ -18,3 +18,73 @@ export function formatDate(date: Date): string {
   const day = date.getDate().toString().padStart(2, '0')
   return `${year}-${month}-${day}`
 }
+
+export function formatDateTime(date: Date): string {
+  const year = date.getFullYear()
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+  const hours = date.getHours().toString().padStart(2, '0')
+  const minutes = date.getMinutes().toString().padStart(2, '0')
+  const seconds = date.getSeconds().toString().padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
+export function formatISO(date: Date): string {
+  const year = date.getFullYear()
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+  const hours = date.getHours().toString().padStart(2, '0')
+  const minutes = date.getMinutes().toString().padStart(2, '0')
+  const seconds = date.getSeconds().toString().padStart(2, '0')
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+08:00`
+}
+
+export function parseDate(dateValue: any): Date {
+  if (!dateValue) return new Date()
+  
+  if (dateValue instanceof Date) return dateValue
+  
+  if (typeof dateValue === 'string') {
+    const normalizedDate = dateValue
+      .replace(/-/g, '/')
+      .replace('T', ' ')
+      .replace(/\.\d{3}/, '')
+    
+    const parsed = new Date(normalizedDate)
+    if (!isNaN(parsed.getTime())) return parsed
+  }
+  
+  if (typeof dateValue === 'number') {
+    return new Date(dateValue)
+  }
+  
+  if (dateValue.seconds || dateValue._seconds) {
+    const timestamp = dateValue.seconds || dateValue._seconds
+    return new Date(timestamp * 1000)
+  }
+  
+  return new Date()
+}
+
+export function isSameDay(date1: Date, date2: Date): boolean {
+  return date1.toDateString() === date2.toDateString()
+}
+
+export function isToday(date: Date): boolean {
+  return isSameDay(date, new Date())
+}
+
+export function formatRelativeTime(date: Date): string {
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes}分钟前`
+  if (hours < 24) return `${hours}小时前`
+  if (days < 7) return `${days}天前`
+  
+  return formatDate(date)
+}

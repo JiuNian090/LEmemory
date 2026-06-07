@@ -46,68 +46,29 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
     try {
       wx.showLoading({ title: '加载中...' })
 
-      // 加载学习记录
-      const { data: records } = await studyRecordCollection.get()
+      // 并行加载数据，提升性能
+      const [
+        { data: records },
+        { data: groups },
+        { data: cards }
+      ] = await Promise.all([
+        studyRecordCollection.get(),
+        cardGroupCollection.get(),
+        cardCollection.get()
+      ])
 
-      let total = 0
-      const groupMap: Map<string, number> = new Map()
-      const dateMap: Map<string, number> = new Map()
-
-      records.forEach((record: any) => {
-        total += record.studyDuration
-
-        // 按卡牌组统计
-        const groupId = record.groupId
-        if (groupId) {
-          const current = groupMap.get(groupId) || 0
-          groupMap.set(groupId, current + record.studyDuration)
-        }
-
-        // 按日期统计（最近7天）
-        const studyDate = new Date(record.studyDate)
-        const dateStr = this.formatDate(studyDate)
-        const currentDate = dateMap.get(dateStr) || 0
-        dateMap.set(dateStr, currentDate + record.studyDuration)
-      })
-
-      // 加载卡牌组数据
-      const { data: groups } = await cardGroupCollection.get()
-
-      // 加载卡牌数据
-      const { data: cards } = await cardCollection.get()
+      // 处理学习记录
+      const { total, groupMap, dateMap } = this.processStudyRecords(records)
 
       // 生成卡牌组时长数据
-      const groupDurations: GroupDuration[] = []
-      groups.forEach((group: any) => {
-        const duration = groupMap.get(group.groupId) || 0
-        if (duration > 0) {
-          groupDurations.push({
-            groupId: group.groupId,
-            title: group.title,
-            duration: duration
-          })
-        }
-      })
-
-      // 按时长降序排序
-      groupDurations.sort((a, b) => b.duration - a.duration)
+      const groupDurations = this.generateGroupDurations(groups, groupMap)
 
       // 生成最近7天趋势数据
-      const weekTrend: WeekTrend[] = []
-      const today = new Date()
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(today)
-        date.setDate(today.getDate() - i)
-        const dateStr = this.formatDate(date)
-        weekTrend.push({
-          date: this.formatDateShort(date),
-          duration: dateMap.get(dateStr) || 0
-        })
-      }
+      const weekTrend = this.generateWeekTrend(dateMap)
 
       // 计算最大时长
-      const maxDuration = weekTrend.length > 0 ? Math.max(...weekTrend.map(t => t.duration)) : 0
-      const maxGroupDuration = groupDurations.length > 0 ? Math.max(...groupDurations.map(g => g.duration)) : 0
+      const maxDuration = weekTrend.length > 0 ? Math.max(...weekTrend.map((t: WeekTrend) => t.duration)) : 0
+      const maxGroupDuration = groupDurations.length > 0 ? Math.max(...groupDurations.map((g: GroupDuration) => g.duration)) : 0
 
       this.setData({
         totalDuration: total,
@@ -129,6 +90,85 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
     } finally {
       wx.hideLoading()
     }
+  },
+
+  /**
+   * 处理学习记录
+   */
+  processStudyRecords(records: any[]): { total: number; groupMap: Map<string, number>; dateMap: Map<string, number> } {
+    let total = 0
+    const groupMap = new Map<string, number>()
+    const dateMap = new Map<string, number>()
+
+    records.forEach((record: any) => {
+      total += record.studyDuration || 0
+
+      const groupId = record.groupId
+      if (groupId) {
+        const current = groupMap.get(groupId) || 0
+        groupMap.set(groupId, current + (record.studyDuration || 0))
+      }
+
+      const studyDate = this.parseDateSafely(record.studyDate)
+      const dateStr = this.formatDate(studyDate)
+      const currentDate = dateMap.get(dateStr) || 0
+      dateMap.set(dateStr, currentDate + (record.studyDuration || 0))
+    })
+
+    return { total, groupMap, dateMap }
+  },
+
+  /**
+   * 生成卡牌组时长数据
+   */
+  generateGroupDurations(groups: any[], groupMap: Map<string, number>): GroupDuration[] {
+    return groups
+      .map((group: any) => ({
+        groupId: group.groupId,
+        title: group.title,
+        duration: groupMap.get(group.groupId) || 0
+      }))
+      .filter((item: GroupDuration) => item.duration > 0)
+      .sort((a, b) => b.duration - a.duration)
+  },
+
+  /**
+   * 生成最近7天趋势数据
+   */
+  generateWeekTrend(dateMap: Map<string, number>): WeekTrend[] {
+    const weekTrend: WeekTrend[] = []
+    const today = new Date()
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today)
+      date.setDate(today.getDate() - i)
+      const dateStr = this.formatDate(date)
+      weekTrend.push({
+        date: this.formatDateShort(date),
+        duration: dateMap.get(dateStr) || 0
+      })
+    }
+    return weekTrend
+  },
+
+  /**
+   * 安全解析日期（兼容多种格式）
+   */
+  parseDateSafely(dateValue: any): Date {
+    if (!dateValue) return new Date()
+    
+    if (dateValue instanceof Date) return dateValue
+    
+    if (typeof dateValue === 'string') {
+      const normalizedDate = dateValue.replace(/-/g, '/').replace('T', ' ')
+      const parsed = new Date(normalizedDate)
+      if (!isNaN(parsed.getTime())) return parsed
+    }
+    
+    if (typeof dateValue === 'number') {
+      return new Date(dateValue)
+    }
+    
+    return new Date()
   },
 
   /**

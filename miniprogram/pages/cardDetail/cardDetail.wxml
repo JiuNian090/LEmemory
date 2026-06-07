@@ -107,6 +107,18 @@
 
       <!-- 学习模式 -->
       <view wx:if="{{isStudying && cards.length > 0}}" class="study-mode">
+        <view class="study-header">
+          <view class="study-progress">
+            <view class="progress-bar">
+              <view class="progress-fill" style="width: {{(currentCardIndex + 1) / cards.length * 100}}%"></view>
+            </view>
+            <view class="progress-text">{{currentCardIndex + 1}} / {{cards.length}}</view>
+          </view>
+          <view class="study-exit" bindtap="exitStudy">
+            <text class="exit-icon">✕</text>
+          </view>
+        </view>
+        
         <view class="card-wrapper" bindtap="flipCard">
           <view class="study-card {{isFlipped ? 'flipped' : ''}} {{cardAnim}}">
             <view class="card-face front">
@@ -133,20 +145,20 @@
             下一张 ›
           </button>
         </view>
-        <view class="mastery-buttons" wx:if="{{isFlipped}}">
-          <view class="mastery-btn mastery-btn-new {{cards[currentCardIndex].status === 'new' ? 'active' : ''}}" bindtap="setMastery" data-status="new">
+        <view class="mastery-buttons">
+          <view class="mastery-btn mastery-btn-new {{cards[currentCardIndex].status === 'new' ? 'active' : ''}}" bindtap="setMasteryAndNext" data-status="new">
             <text class="mastery-btn-icon">😶</text>
             <text class="mastery-btn-label">未掌握</text>
           </view>
-          <view class="mastery-btn mastery-btn-learning {{cards[currentCardIndex].status === 'learning' ? 'active' : ''}}" bindtap="setMastery" data-status="learning">
+          <view class="mastery-btn mastery-btn-learning {{cards[currentCardIndex].status === 'learning' ? 'active' : ''}}" bindtap="setMasteryAndNext" data-status="learning">
             <text class="mastery-btn-icon">🤔</text>
             <text class="mastery-btn-label">基本掌握</text>
           </view>
-          <view class="mastery-btn mastery-btn-mastered {{cards[currentCardIndex].status === 'mastered' ? 'active' : ''}}" bindtap="setMastery" data-status="mastered">
+          <view class="mastery-btn mastery-btn-mastered {{cards[currentCardIndex].status === 'mastered' ? 'active' : ''}}" bindtap="setMasteryAndNext" data-status="mastered">
             <text class="mastery-btn-icon">😊</text>
             <text class="mastery-btn-label">良好掌握</text>
           </view>
-          <view class="mastery-btn mastery-btn-difficult {{cards[currentCardIndex].status === 'difficult' ? 'active' : ''}}" bindtap="setMastery" data-status="difficult">
+          <view class="mastery-btn mastery-btn-difficult {{cards[currentCardIndex].status === 'difficult' ? 'active' : ''}}" bindtap="setMasteryAndNext" data-status="difficult">
             <text class="mastery-btn-icon">😰</text>
             <text class="mastery-btn-label">疑难</text>
           </view>
@@ -178,21 +190,21 @@
     </view>
 
     <!-- 卡牌标签页 -->
-    <view wx:if="{{currentTab === 2}}" class="cards-section">
+    <view wx:if="{{currentTab === 2}}" class="cards-section" bindscrolltolower="onScrollToLower">
       <view class="add-card-btn" bindtap="showAddCardDialog">
         <text class="add-icon">+</text>
         <text class="add-text">添加卡牌</text>
       </view>
       <block wx:if="{{cards.length > 0}}">
         <view class="card-list">
-          <view wx:for="{{cards}}" wx:key="cardId" class="card-item">
+          <view wx:for="{{displayCards}}" wx:key="cardId" wx:for-item="card" class="card-item">
             <view class="item-header">
-              <view class="item-index">{{index + 1}}</view>
+              <view class="item-index">{{cards.indexOf(card) + 1}}</view>
               <view class="item-actions">
-                <view class="action-btn edit" bindtap="showEditCardDialog" data-cardid="{{item.cardId}}" data-front="{{item.front}}" data-back="{{item.back}}">
+                <view class="action-btn edit" bindtap="showEditCardDialog" data-cardid="{{card.cardId}}" data-front="{{card.front}}" data-back="{{card.back}}">
                   编辑
                 </view>
-                <view class="action-btn delete" bindtap="deleteCard" data-cardid="{{item.cardId}}">
+                <view class="action-btn delete" bindtap="deleteCard" data-cardid="{{card.cardId}}">
                   删除
                 </view>
               </view>
@@ -200,19 +212,22 @@
             <view class="item-content">
               <view class="item-question">
                 <text class="label">Q:</text>
-                <text class="text">{{item.front}}</text>
+                <text class="text">{{card.front}}</text>
               </view>
               <view class="item-answer">
                 <text class="label">A:</text>
-                <text class="text">{{item.back}}</text>
+                <text class="text">{{card.back}}</text>
               </view>
             </view>
             <view class="item-footer">
-              <view class="favorite-btn {{favoriteCardIds.has(item.cardId) ? 'favorited' : ''}}" bindtap="toggleFavorite" data-cardid="{{item.cardId}}">
-                {{favoriteCardIds.has(item.cardId) ? '★ 已收藏' : '☆ 收藏'}}
+              <view class="favorite-btn {{favoriteCardIds.includes(card.cardId) ? 'favorited' : ''}}" bindtap="toggleFavorite" data-cardid="{{card.cardId}}">
+                {{favoriteCardIds.includes(card.cardId) ? '★ 已收藏' : '☆ 收藏'}}
               </view>
             </view>
           </view>
+        </view>
+        <view wx:if="{{isLoadingMore}}" class="loading-more">
+          <text class="loading-text">加载中...</text>
         </view>
       </block>
       <view wx:else class="empty-state">
