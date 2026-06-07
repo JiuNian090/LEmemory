@@ -50,9 +50,13 @@
 
         <!-- 快捷功能按钮 -->
         <view class="quick-actions">
+          <button class="quick-action-btn share-btn" open-type="share">
+            <text class="action-icon">💬</text>
+            <text class="action-text">分享给好友</text>
+          </button>
           <view class="quick-action-btn" bindtap="shareCardGroup">
             <text class="action-icon">📤</text>
-            <text class="action-text">分享卡牌组</text>
+            <text class="action-text">备份卡牌组</text>
           </view>
           <view class="quick-action-btn" bindtap="importCards">
             <text class="action-icon">📥</text>

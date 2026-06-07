@@ -1,0 +1,62 @@
+<view class="container">
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <text class="loading-text">加载卡牌组中...</text>
+  </view>
+
+  <!-- 加载失败 -->
+  <view wx:elif="{{loadError}}" class="error-container">
+    <text class="error-icon">😵</text>
+    <text class="error-text">{{loadError}}</text>
+    <button class="retry-btn" bindtap="loadSharedGroup">重新加载</button>
+  </view>
+
+  <!-- 导入成功 -->
+  <view wx:elif="{{imported}}" class="success-container">
+    <text class="success-icon">🎉</text>
+    <text class="success-text">导入成功！</text>
+    <text class="success-desc">即将跳转到卡牌组</text>
+  </view>
+
+  <!-- 正常内容 -->
+  <block wx:else>
+    <!-- 卡牌组信息 -->
+    <view class="group-info-card">
+      <view class="group-icon">📚</view>
+      <view class="group-details">
+        <view class="group-title">{{group.title}}</view>
+        <view class="group-meta">共 {{group.cardCount}} 张卡牌</view>
+      </view>
+    </view>
+
+    <!-- 卡牌列表 -->
+    <view class="section-title">卡牌预览</view>
+    <view class="card-list">
+      <view wx:for="{{cards}}" wx:key="cardId" class="card-item">
+        <view class="card-number">{{index + 1}}</view>
+        <view class="card-q">
+          <text class="label">Q:</text>
+          <text class="text">{{item.front}}</text>
+        </view>
+        <view class="card-a">
+          <text class="label">A:</text>
+          <text class="text">{{item.back}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 底部安全区 -->
+    <view style="height: 140rpx"></view>
+
+    <!-- 导入按钮 -->
+    <view class="import-btn" bindtap="importGroup">
+      <text class="import-btn-icon">📥</text>
+      <text class="import-btn-text">导入到我的卡牌组</text>
+    </view>
+  </block>
+
+  <!-- 导入中遮罩 -->
+  <view wx:if="{{importing}}" class="importing-overlay">
+    <text class="importing-text">导入中...</text>
+  </view>
+</view>

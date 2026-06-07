@@ -2,6 +2,7 @@
   "pages": [
     "pages/study/study",
     "pages/cardDetail/cardDetail",
+    "pages/shareImport/shareImport",
     "pages/statistics/statistics",
     "pages/mine/mine",
     "pages/backup/backup",

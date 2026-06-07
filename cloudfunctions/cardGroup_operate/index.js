@@ -36,6 +36,22 @@ exports.main = async (event, context) => {
     } else if (action === 'delete') {
       await db.collection('cardGroups').where({ groupId }).remove()
       await db.collection('cards').where({ groupId }).remove()
+    } else if (action === 'getSharedGroup') {
+      const groupResult = await db.collection('cardGroups').where({
+        groupId
+      }).get()
+      
+      const cardsResult = await db.collection('cards').where({
+        groupId
+      }).get()
+      
+      return {
+        success: true,
+        data: {
+          group: groupResult.data[0] || null,
+          cards: cardsResult.data
+        }
+      }
     }
 
     return { success: true }

@@ -864,6 +864,16 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     }
   },
 
+  /**
+   * 分享卡牌组（小程序消息卡片）
+   */
+  onShareAppMessage() {
+    return {
+      title: this.data.title,
+      path: `/pages/shareImport/shareImport?groupId=${this.data.groupId}`
+    }
+  },
+
   shareCardGroup() {
     const { title, description, groupId, cards } = this.data
 

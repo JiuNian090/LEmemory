@@ -204,6 +204,32 @@
   box-shadow: var(--shadow-hover);
 }
 
+.quick-action-btn.share-btn {
+  flex: 1;
+  background: var(--card-bg);
+  border-radius: 20rpx;
+  padding: 30rpx 20rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow);
+  border: none;
+  margin: 0;
+  font-size: inherit;
+  line-height: initial;
+}
+
+.quick-action-btn.share-btn::after {
+  border: none;
+}
+
+.quick-action-btn.share-btn:active {
+  transform: scale(0.96);
+  box-shadow: var(--shadow-hover);
+}
+
 .action-icon {
   font-size: 40rpx;
 }
