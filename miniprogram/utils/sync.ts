@@ -132,6 +132,7 @@ class SyncManager {
             action: 'create',
             backupId,
             description: description || '',
+            appVersion: '1.0.0',
             backupData: localData,
             dataSize,
             cardGroupsCount: localData.cardGroups.length,

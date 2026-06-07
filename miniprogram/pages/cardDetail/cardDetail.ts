@@ -1,6 +1,9 @@
 import { cardCollection, favoriteCollection, studyRecordCollection, generateId, deleteCardGroup } from '../../utils/db'
 import { parseDate } from '../../utils/time'
 import { showErrorToast } from '../../utils/error'
+import type { IAppOption } from '../../utils/types'
+
+const app = getApp<IAppOption>()
 
 interface CardItem {
   _id?: string
@@ -875,7 +878,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   },
 
   shareCardGroup() {
-    const { title, description, groupId, cards } = this.data
+    const { title, description, cards } = this.data
 
     if (cards.length === 0) {
       wx.showToast({
@@ -885,20 +888,33 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       return
     }
 
+    const exportTime = new Date().toISOString()
+
     const exportData = {
-      version: '1.0',
+      schemaVersion: '2.0',
+      appVersion: '1.0.0',
+      exportTime,
+      exporter: {
+        nickName: app.globalData.userInfo?.nickName || ''
+      },
+      summary: {
+        cardCount: cards.length
+      },
       group: {
-        groupId,
         title,
-        description
+        description: description || '',
+        createTime: exportTime,
+        updateTime: exportTime
       },
       cards: cards.map(c => ({
         front: c.front,
         back: c.back,
+        createTime: c.createTime instanceof Date
+          ? c.createTime.toISOString()
+          : (typeof c.createTime === 'string' ? c.createTime : exportTime),
         status: c.status || 'new',
         reviewCount: c.reviewCount || 0
-      })),
-      exportTime: new Date().toISOString()
+      }))
     }
 
     const jsonStr = JSON.stringify(exportData, null, 2)
@@ -906,36 +922,31 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     const fs = wx.getFileSystemManager()
     const tmpPath = `${wx.env.USER_DATA_PATH}/${fileName}`
 
-    fs.writeFile({
-      filePath: tmpPath,
-      data: jsonStr,
-      encoding: 'utf8',
-      success: () => {
-        console.log('[CardDetail] 临时文件写入成功', tmpPath)
-        // @ts-ignore shareFileMessage 类型声明缺失
-        wx.shareFileMessage({
-          filePath: tmpPath,
-          fileName,
-          success: () => {
-            console.log('[CardDetail] 分享卡牌组成功')
-          },
-          fail: (err: WechatMiniprogram.GeneralCallbackResult) => {
-            console.error('[CardDetail] 分享文件失败', err)
-            wx.showToast({
-              title: '分享失败',
-              icon: 'none'
-            })
-          }
-        })
-      },
-      fail: (err: WechatMiniprogram.GeneralCallbackResult) => {
-        console.error('[CardDetail] 写入文件失败', err)
-        wx.showToast({
-          title: '分享失败',
-          icon: 'none'
-        })
-      }
-    })
+    try {
+      fs.writeFileSync(tmpPath, jsonStr, 'utf8')
+      console.log('[CardDetail] 临时文件写入成功', tmpPath)
+      // @ts-ignore shareFileMessage 类型声明缺失
+      wx.shareFileMessage({
+        filePath: tmpPath,
+        fileName,
+        success: () => {
+          console.log('[CardDetail] 分享卡牌组成功')
+        },
+        fail: (err: WechatMiniprogram.GeneralCallbackResult) => {
+          console.error('[CardDetail] 分享文件失败', err)
+          wx.showToast({
+            title: '分享失败',
+            icon: 'none'
+          })
+        }
+      })
+    } catch (err) {
+      console.error('[CardDetail] 写入文件失败', err)
+      wx.showToast({
+        title: '分享失败',
+        icon: 'none'
+      })
+    }
   },
 
   importCards() {

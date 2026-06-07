@@ -34,6 +34,7 @@ exports.main = async (event, context) => {
         data: {
           backupId,
           userId,
+          appVersion: event.appVersion || 'unknown',
           backupTime: new Date(),
           dataSize: dataSize || 0,
           description: description || '',

@@ -570,13 +570,26 @@ export async function getUserId(): Promise<string> {
 // ==================== 数据导入/导出 ====================
 
 export function exportAllLocalData(): BackupData {
+  const cardGroups = getLocalStorageData(STORAGE_KEYS.CARD_GROUPS) as CardGroup[]
+  const cards = getLocalStorageData(STORAGE_KEYS.CARDS) as Card[]
+  const studyRecords = getLocalStorageData(STORAGE_KEYS.STUDY_RECORDS) as StudyRecord[]
+  const favorites = getLocalStorageData(STORAGE_KEYS.FAVORITES) as Favorite[]
+
   return {
     version: '1.0',
+    schemaVersion: '2.0',
+    appVersion: '1.0.0',
     backupTime: new Date(),
-    cardGroups: getLocalStorageData(STORAGE_KEYS.CARD_GROUPS) as CardGroup[],
-    cards: getLocalStorageData(STORAGE_KEYS.CARDS) as Card[],
-    studyRecords: getLocalStorageData(STORAGE_KEYS.STUDY_RECORDS) as StudyRecord[],
-    favorites: getLocalStorageData(STORAGE_KEYS.FAVORITES) as Favorite[]
+    summary: {
+      cardGroupCount: cardGroups.length,
+      cardCount: cards.length,
+      studyRecordCount: studyRecords.length,
+      favoriteCount: favorites.length
+    },
+    cardGroups,
+    cards,
+    studyRecords,
+    favorites
   }
 }
 
@@ -678,8 +691,16 @@ export async function downloadCloudToLocal(userId: string): Promise<number> {
 
     importLocalData({
       version: '1.0',
+      schemaVersion: '2.0',
+      appVersion: '1.0.0',
       backupTime: new Date(),
       userId,
+      summary: {
+        cardGroupCount: cardGroups.length,
+        cardCount: cards.length,
+        studyRecordCount: studyRecords.length,
+        favoriteCount: favorites.length
+      },
       cardGroups: cardGroups as CardGroup[],
       cards: cards as Card[],
       studyRecords: studyRecords as StudyRecord[],

@@ -78,8 +78,16 @@ export interface BackupRecord {
 // 完整备份数据
 export interface BackupData {
   version: string
+  schemaVersion?: string
+  appVersion?: string
   backupTime: Date
   userId?: string
+  summary?: {
+    cardGroupCount: number
+    cardCount: number
+    studyRecordCount: number
+    favoriteCount: number
+  }
   cardGroups: CardGroup[]
   cards: Card[]
   studyRecords: StudyRecord[]
