@@ -12,6 +12,7 @@ import {
 } from './db'
 import type { BackupData, BackupRecord } from './types'
 import { IAppOption } from './types'
+import { syncEngine } from './syncEngine'
 
 const app = getApp<IAppOption>()
 const BACKUP_STORAGE_KEY = 'backup_records'
@@ -19,10 +20,9 @@ const BACKUP_STORAGE_KEY = 'backup_records'
 class SyncManager {
 
   /**
-   * 登录后执行账号关联和数据同步
-   * 策略：云端为主，下载到本地覆盖
+   * 登录后从云端全量下载数据，并启动增量同步引擎
    */
-  async linkAccountAndSync(): Promise<{
+  async syncFromCloudOnLogin(): Promise<{
     success: boolean
     message: string
     syncedCount: number
@@ -37,7 +37,6 @@ class SyncManager {
 
       updateSyncStatus({ isSyncing: true })
 
-      // 登录时：从云端下载所有数据到本地
       const syncedCount = await downloadCloudToLocal(userId)
 
       updateSyncStatus({
@@ -46,6 +45,9 @@ class SyncManager {
         pendingItems: 0,
         lastError: undefined
       })
+
+      // 启动增量同步引擎
+      syncEngine.start()
 
       return {
         success: true,
@@ -59,6 +61,7 @@ class SyncManager {
         isSyncing: false,
         lastError: error instanceof Error ? error.message : '未知错误'
       })
+      syncEngine.start()
       return {
         success: false,
         message: '同步失败：' + (error instanceof Error ? error.message : '未知错误'),
@@ -73,6 +76,7 @@ class SyncManager {
   async onLogout(): Promise<void> {
     console.log('[Sync] 退出登录，清除本地数据')
     try {
+      await syncEngine.flushNow()
       const userId = await getUserId()
       if (userId !== 'local_user') {
         await uploadAllLocalToCloud(userId)
@@ -82,14 +86,14 @@ class SyncManager {
       console.warn('[Sync] 退出时同步云端失败', err)
     }
 
-    // 清除所有本地存储
+    syncEngine.stop()
+
     try {
       wx.clearStorageSync()
     } catch (err) {
       console.error('[Sync] 清除本地数据失败', err)
     }
 
-    // 恢复记住的账号
     try {
       const preserved = wx.getStorageSync('saved_accounts_preserve')
       if (preserved) {
@@ -117,6 +121,8 @@ class SyncManager {
       }
 
       wx.showLoading({ title: '备份中...' })
+
+      await syncEngine.flushNow()
 
       const localData = exportAllLocalData()
       const dataJson = JSON.stringify(localData)

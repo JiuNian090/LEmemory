@@ -30,7 +30,7 @@ export interface CardGroup {
   title: string
   description?: string
   createTime: Date
-  updateTime: Date
+  updateTime: number
   syncStatus?: 'local' | 'synced' | 'pending'
 }
 
@@ -41,6 +41,7 @@ export interface Card {
   front: string
   back: string
   createTime: Date
+  updateTime: number
   syncStatus?: 'local' | 'synced' | 'pending'
 }
 
@@ -50,6 +51,7 @@ export interface StudyRecord {
   groupId: string
   studyDuration: number
   studyDate: Date
+  updateTime: number
   syncStatus?: 'local' | 'synced' | 'pending'
 }
 
@@ -59,6 +61,7 @@ export interface Favorite {
   cardId: string
   groupId: string
   createTime: Date
+  updateTime: number
   syncStatus?: 'local' | 'synced' | 'pending'
 }
 
@@ -107,4 +110,22 @@ export interface IAppOption {
     userInfo: User | null
   }
   userInfoReadyCallback?: WechatMiniprogram.GetUserProfileSuccessCallbackResult
+}
+
+export type SyncChangeType = 'add' | 'update' | 'remove'
+
+export interface SyncChange {
+  id: string
+  type: SyncChangeType
+  collection: 'cardGroups' | 'cards' | 'studyRecords' | 'favorites'
+  item: any
+  updateTime: number
+  retryCount: number
+}
+
+export interface SyncResult {
+  success: boolean
+  processed: number
+  skipped: number
+  conflicts: Array<{ id: string; cloudUpdateTime: number; localUpdateTime: number }>
 }

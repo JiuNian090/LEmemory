@@ -1,5 +1,6 @@
 import { setEncryptedStorage, getEncryptedStorage } from './crypto'
 import type { CardGroup, Card, StudyRecord, Favorite, BackupData, SyncStatus } from './types'
+import { syncEngine } from './syncEngine'
 
 let cloudDb: any = null
 let cloudAvailable = false
@@ -231,21 +232,13 @@ class DualCollection {
 
   async add({ data }: { data: any }): Promise<{ _id: string }> {
     const localResult = await this.getLocal().add({ data })
-    if (this.cloudCollection) {
-      try {
-        await this.cloudCollection.add({
-          data: {
-            ...data,
-            _id: localResult._id,
-            updateTime: new Date(),
-            syncStatus: 'synced'
-          }
-        })
-      } catch (err) {
-        console.warn(`[DB] 云端写入 ${this.key} 失败，已加入待同步`, err)
-        addPendingSync({ type: 'add', collection: this.key, data: { ...data, _id: localResult._id } })
-      }
-    }
+    syncEngine.enqueue({
+      id: localResult._id,
+      type: 'add',
+      collection: this.key as any,
+      item: { ...data, _id: localResult._id, updateTime: Date.now() },
+      updateTime: Date.now()
+    })
     return localResult
   }
 
@@ -394,47 +387,33 @@ class DualDoc {
   async update({ data }: { data: any }): Promise<any> {
     const docData = await this.fetchDocData()
     this.removeLocalByAllIds(docData)
-    // 重新写入更新后的数据到本地
+    const updateTime = Date.now()
     if (docData) {
-      const merged = { ...docData, ...data, updateTime: new Date() }
+      const merged = { ...docData, ...data, updateTime }
       const items = getLocalStorageData(this.key)
       items.push(merged)
       setLocalStorageData(this.key, items)
     }
-    if (this.cloudCollection) {
-      try {
-        const { data: cloudDocs } = await this.cloudCollection
-          .where({ _id: this.id })
-          .limit(1)
-          .get()
-        if (cloudDocs.length > 0) {
-          await this.cloudCollection.doc(cloudDocs[0]._id).update({ data })
-        }
-      } catch (err) {
-        console.warn(`[DB] 云端更新 ${this.key} 失败`, err)
-        addPendingSync({ type: 'update', collection: this.key, id: this.id, data })
-      }
-    }
+    syncEngine.enqueue({
+      id: this.id,
+      type: 'update',
+      collection: this.key as any,
+      item: { ...docData, ...data, _id: this.id, updateTime },
+      updateTime
+    })
     return {}
   }
 
   async remove(): Promise<any> {
     const docData = await this.fetchDocData()
     this.removeLocalByAllIds(docData)
-    if (this.cloudCollection) {
-      try {
-        const { data: cloudDocs } = await this.cloudCollection
-          .where({ _id: this.id })
-          .limit(1)
-          .get()
-        if (cloudDocs.length > 0) {
-          await this.cloudCollection.doc(cloudDocs[0]._id).remove()
-        }
-      } catch (err) {
-        console.warn(`[DB] 云端删除 ${this.key} 失败`, err)
-        addPendingSync({ type: 'remove', collection: this.key, id: this.id })
-      }
-    }
+    syncEngine.enqueue({
+      id: this.id,
+      type: 'remove',
+      collection: this.key as any,
+      item: { _id: this.id },
+      updateTime: Date.now()
+    })
     return {}
   }
 
@@ -456,26 +435,19 @@ class DualDoc {
   async set(options: { data: any }): Promise<any> {
     const docData = await this.fetchDocData()
     this.removeLocalByAllIds(docData)
+    const updateTime = Date.now()
     if (options.data) {
       const items = getLocalStorageData(this.key)
-      items.push({ ...options.data, _id: this.id, updateTime: new Date() })
+      items.push({ ...options.data, _id: this.id, updateTime })
       setLocalStorageData(this.key, items)
     }
-    if (this.cloudCollection) {
-      try {
-        const { data: cloudDocs } = await this.cloudCollection
-          .where({ _id: this.id })
-          .limit(1)
-          .get()
-        if (cloudDocs.length > 0) {
-          await this.cloudCollection.doc(cloudDocs[0]._id).set({ data: options.data })
-        } else {
-          await this.cloudCollection.add({ data: { ...options.data, _id: this.id } })
-        }
-      } catch (err) {
-        console.warn(`[DB] 云端 set ${this.key} 失败`, err)
-      }
-    }
+    syncEngine.enqueue({
+      id: this.id,
+      type: 'update',
+      collection: this.key as any,
+      item: { ...options.data, _id: this.id, updateTime },
+      updateTime
+    })
     return {}
   }
 }

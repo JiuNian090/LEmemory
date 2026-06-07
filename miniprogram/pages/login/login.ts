@@ -1,4 +1,5 @@
 import { syncManager } from '../../utils/sync'
+import { syncEngine } from '../../utils/syncEngine'
 import { IAppOption } from '../../utils/types'
 
 const app = getApp<IAppOption>()
@@ -297,7 +298,7 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
 
         // 同步数据
         wx.showLoading({ title: '同步数据...' })
-        const syncResult = await syncManager.linkAccountAndSync()
+        const syncResult = await syncManager.syncFromCloudOnLogin()
         wx.hideLoading()
 
         wx.showToast({

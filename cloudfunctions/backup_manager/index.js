@@ -86,6 +86,83 @@ exports.main = async (event, context) => {
       }
 
       return { success: true }
+    } else if (action === 'sync') {
+      // 增量同步：处理变更队列
+      const changes = event.changes || []
+      let processed = 0
+      let skipped = 0
+      const conflicts = []
+
+      for (const change of changes) {
+        const { type, collection: collName, item, updateTime } = change
+
+        try {
+          if (type === 'remove') {
+            const businessKeys = {
+              cardGroups: 'groupId',
+              cards: 'cardId',
+              studyRecords: 'recordId',
+              favorites: 'favoriteId'
+            }
+            const key = businessKeys[collName] || '_id'
+            const keyValue = item[key] || item._id
+            const { data: existing } = await db.collection(collName)
+              .where({ [key]: keyValue })
+              .limit(1)
+              .get()
+            if (existing.length > 0) {
+              await db.collection(collName).doc(existing[0]._id).remove()
+              processed++
+            } else {
+              skipped++
+            }
+          } else if (type === 'add' || type === 'update') {
+            const businessKeys = {
+              cardGroups: 'groupId',
+              cards: 'cardId',
+              studyRecords: 'recordId',
+              favorites: 'favoriteId'
+            }
+            const key = businessKeys[collName] || '_id'
+            const keyValue = item[key] || item._id
+            const { data: existing } = await db.collection(collName)
+              .where({ [key]: keyValue })
+              .limit(1)
+              .get()
+
+            if (existing.length > 0) {
+              const cloudItem = existing[0]
+              if (cloudItem.updateTime && cloudItem.updateTime > updateTime) {
+                skipped++
+                conflicts.push({
+                  id: keyValue,
+                  cloudUpdateTime: cloudItem.updateTime,
+                  localUpdateTime: updateTime
+                })
+                continue
+              }
+              await db.collection(collName).doc(cloudItem._id).set({
+                data: { ...item, userId, updateTime }
+              })
+            } else {
+              await db.collection(collName).add({
+                data: { ...item, userId, updateTime }
+              })
+            }
+            processed++
+          }
+        } catch (err) {
+          console.error(`[BackupManager] sync 处理单条变更失败: ${collName} ${change.id}`, err)
+          skipped++
+        }
+      }
+
+      return {
+        success: true,
+        processed,
+        skipped,
+        conflicts
+      }
     }
 
     return { success: false, error: '未知操作' }

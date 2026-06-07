@@ -1,4 +1,5 @@
 import { syncManager } from '../../utils/sync'
+import { syncEngine } from '../../utils/syncEngine'
 import { getSyncStatus, getStorageInfo } from '../../utils/db'
 import type { BackupRecord } from '../../utils/types'
 
@@ -239,31 +240,15 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
    * 手动同步数据
    */
   async onManualSync() {
-    wx.showModal({
-      title: '同步数据',
-      content: '确定要与云端同步数据吗？',
-      success: async (res) => {
-        if (res.confirm) {
-          wx.showLoading({ title: '同步中...' })
-          
-          const result = await syncManager.linkAccountAndSync()
-          
-          wx.hideLoading()
-          
-          if (result.success) {
-            wx.showToast({
-              title: result.message,
-              icon: 'success'
-            })
-            this.loadData()
-          } else {
-            wx.showToast({
-              title: result.message,
-              icon: 'none'
-            })
-          }
-        }
-      }
-    })
+    wx.showLoading({ title: '同步中...' })
+    try {
+      await syncEngine.flushNow()
+      wx.hideLoading()
+      wx.showToast({ title: '同步完成', icon: 'success' })
+      this.loadData()
+    } catch (err) {
+      wx.hideLoading()
+      wx.showToast({ title: '同步失败', icon: 'none' })
+    }
   }
 })
