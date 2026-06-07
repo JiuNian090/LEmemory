@@ -230,6 +230,19 @@
   box-shadow: var(--shadow-hover);
 }
 
+.clipboard-btn {
+  border: 2rpx solid rgba(99, 102, 241, 0.25);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(139, 92, 246, 0.06) 100%);
+}
+
+.clipboard-btn .action-icon {
+  color: #6366f1;
+}
+
+.clipboard-btn .action-text {
+  color: #6366f1;
+}
+
 .action-icon {
   font-size: 40rpx;
 }

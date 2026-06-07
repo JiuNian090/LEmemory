@@ -62,6 +62,10 @@
             <text class="action-icon">📥</text>
             <text class="action-text">导入卡牌</text>
           </view>
+          <view class="quick-action-btn clipboard-btn" bindtap="importFromClipboard">
+            <text class="action-icon">📋</text>
+            <text class="action-text">从剪贴板导入</text>
+          </view>
           <view class="quick-action-btn" bindtap="startStudy">
             <text class="action-icon">📝</text>
             <text class="action-text">测验</text>

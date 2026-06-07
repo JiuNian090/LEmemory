@@ -980,6 +980,35 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     })
   },
 
+  /**
+   * 从剪贴板导入卡牌 JSON
+   */
+  importFromClipboard() {
+    wx.getClipboardData({
+      success: (res) => {
+        const data = res.data.trim()
+        if (!data) {
+          wx.showToast({
+            title: '剪贴板为空',
+            icon: 'none'
+          })
+          return
+        }
+        // 尝试提取 JSON 数组（支持 markdown 代码块包裹）
+        const jsonMatch = data.match(/```(?:json)?\s*([\s\S]*?)```/) || data.match(/\[[\s\S]*\]/)
+        const jsonStr = jsonMatch ? jsonMatch[1] || jsonMatch[0] : data
+        this.processImportData(jsonStr)
+      },
+      fail: (err) => {
+        console.error('[CardDetail] 读取剪贴板失败', err)
+        wx.showToast({
+          title: '读取剪贴板失败',
+          icon: 'none'
+        })
+      }
+    })
+  },
+
   processImportData(rawData: string) {
     try {
       let cardsToImport: { front: string; back: string }[] = []
