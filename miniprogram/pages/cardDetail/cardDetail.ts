@@ -1,5 +1,4 @@
-import { cardGroupCollection, cardCollection, favoriteCollection, studyRecordCollection, generateId, deleteCardGroup } from '../../utils/db'
-import { parseDate } from '../../utils/time'
+import { cardGroupCollection, cardCollection, favoriteCollection, generateId, deleteCardGroup } from '../../utils/db'
 import { showErrorToast } from '../../utils/error'
 import type { IAppOption } from '../../utils/types'
 import { enableShareMenu } from '../../utils/share'
@@ -72,6 +71,9 @@ interface CardDetailPageData {
   displayStart: number
   displayEnd: number
   isLoadingMore: boolean
+  // 实时计时
+  elapsedSeconds: number
+  timerDisplay: string
 }
 
 Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
@@ -114,10 +116,20 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     donutGradient: 'conic-gradient(#d1d5db 0deg, #d1d5db 360deg)',
     displayStart: 0,
     displayEnd: 10,
-    isLoadingMore: false
+    isLoadingMore: false,
+    elapsedSeconds: 0,
+    timerDisplay: '00:00'
   },
 
   pageSize: 10,
+
+  // 计时器
+  timerInterval: null as number | null,
+  saveInterval: null as number | null,
+  /** 上次保存时的时间戳 */
+  lastSaveTime: 0,
+  /** 当前会话累积秒数 */
+  sessionSeconds: 0,
 
   onLoad(options: any) {
     enableShareMenu()
@@ -150,7 +162,10 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
 
   onShow() {
     if (this.data.isStudying) {
-      this.startStudyTimer()
+      // 只启动尚未运行的计时器（onHide 已停止，onShow 重新开始）
+      if (!this.timerInterval) {
+        this.startStudyTimer()
+      }
     } else {
       this.loadGroupEmoji(this.data.groupId)
       this.loadCards()
@@ -339,28 +354,26 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   },
 
   async loadTodayStudyTime() {
+    const username = app.globalData.userInfo?.username
+    if (!username) return
+
     try {
-      const todayStart = new Date()
-      todayStart.setHours(0, 0, 0, 0)
-
-      const { data } = await studyRecordCollection.where({
-        groupId: this.data.groupId
-      }).get()
-
-      const studiedTime = (data as any[]).reduce((sum, r) => {
-        const recordDate = parseDate(r.studyDate)
-        if (recordDate >= todayStart) {
-          return sum + (r.studyDuration || 0)
+      const { result } = await wx.cloud.callFunction({
+        name: 'study_sync',
+        data: {
+          action: 'getTodayTotal',
+          username,
+          groupId: this.data.groupId
         }
-        return sum
-      }, 0)
-
-      this.setData({
-        'todayStats.studiedTime': studiedTime,
-        formattedStudiedTime: this.formatTime(studiedTime)
       })
-
-      console.log('[CardDetail] 今日学习时长', studiedTime, '秒')
+      const res = result as { success: boolean; total: number }
+      if (res.success) {
+        this.setData({
+          'todayStats.studiedTime': res.total,
+          formattedStudiedTime: this.formatTime(res.total)
+        })
+        console.log('[CardDetail] 今日学习时长', res.total, '秒')
+      }
     } catch (err) {
       console.error('[CardDetail] 加载今日学习时长失败', err)
     }
@@ -422,12 +435,60 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   },
 
   /**
-   * 开始学习计时
+   * 开始学习计时（实时显示 + 每30秒自动保存）
    */
   startStudyTimer() {
+    const now = Date.now()
+    this.lastSaveTime = now
+    this.sessionSeconds = 0
+
     this.setData({
-      studyStartTime: Date.now()
+      elapsedSeconds: 0,
+      timerDisplay: '00:00'
     })
+
+    // 每秒更新显示
+    this.timerInterval = setInterval(() => {
+      const elapsed = this.sessionSeconds + Math.floor((Date.now() - this.lastSaveTime) / 1000)
+      this.setData({
+        elapsedSeconds: elapsed,
+        timerDisplay: this.formatTimerDisplay(elapsed)
+      })
+    }, 1000)
+
+    // 每30秒自动保存增量
+    this.saveInterval = setInterval(() => {
+      const now2 = Date.now()
+      const delta = Math.floor((now2 - this.lastSaveTime) / 1000)
+      if (delta >= 5) {
+        this.sessionSeconds += delta
+        this.lastSaveTime = now2
+        this.saveStudyRecord(delta)
+      }
+    }, 30000)
+  },
+
+  /** 清除所有计时器 */
+  clearStudyIntervals() {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval)
+      this.timerInterval = null
+    }
+    if (this.saveInterval) {
+      clearInterval(this.saveInterval)
+      this.saveInterval = null
+    }
+  },
+
+  /** 格式化秒数为 HH:MM:SS 或 MM:SS */
+  formatTimerDisplay(seconds: number): string {
+    const h = Math.floor(seconds / 3600)
+    const m = Math.floor((seconds % 3600) / 60)
+    const s = seconds % 60
+    if (h > 0) {
+      return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+    }
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   },
 
   /**
@@ -450,30 +511,48 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
    * 停止学习计时并保存
    */
   stopStudyTimer() {
-    if (this.data.studyStartTime) {
-      const duration = Math.floor((Date.now() - Number(this.data.studyStartTime)) / 1000)
-      this.saveStudyRecord(duration)
+    this.clearStudyIntervals()
+    // 保存最后一段增量（与自动保存的 delta 语义一致）
+    const delta = Math.floor((Date.now() - this.lastSaveTime) / 1000)
+    if (delta >= 5) {
+      this.saveStudyRecord(delta)
     }
+    this.sessionSeconds = 0
+    this.lastSaveTime = 0
   },
 
   /**
-   * 保存学习记录
+   * 保存学习记录（云端同步）
    */
   async saveStudyRecord(duration: number) {
     if (duration < 5) {
       console.log('[CardDetail] 学习时长太短，不保存')
       return
     }
+
+    const username = app.globalData.userInfo?.username
+    if (!username) {
+      console.warn('[CardDetail] 未登录，跳过云端保存')
+      return
+    }
+
     try {
-      await studyRecordCollection.add({
+      const { result } = await wx.cloud.callFunction({
+        name: 'study_sync',
         data: {
-          recordId: generateId(),
+          action: 'save',
+          username,
           groupId: this.data.groupId,
-          studyDuration: duration,
-          studyDate: new Date()
+          duration,
+          studyDate: new Date().toISOString()
         }
       })
-      console.log('[CardDetail] 保存学习记录成功', duration, '秒')
+      const res = result as { success: boolean }
+      if (res.success) {
+        console.log('[CardDetail] 保存学习记录成功', duration, '秒')
+      } else {
+        console.error('[CardDetail] 保存学习记录失败', res)
+      }
     } catch (err) {
       console.error('[CardDetail] 保存学习记录失败', err)
     }

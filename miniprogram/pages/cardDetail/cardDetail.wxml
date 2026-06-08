@@ -124,6 +124,7 @@
             </view>
             <view class="progress-text">{{currentCardIndex + 1}} / {{cards.length}}</view>
           </view>
+          <view class="study-timer">{{timerDisplay}}</view>
           <view class="study-exit" bindtap="exitStudy">
             <text class="exit-icon">✕</text>
           </view>

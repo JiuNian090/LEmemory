@@ -224,13 +224,15 @@ function buildResult(
 }
 
 /**
- * 从本地存储计算统计结果
+ * 从本地存储或云端数据计算统计结果
+ * @param cloudRecords - 可选，云端学习记录，未提供时从本地存储读取
  */
 export function computeStatistics(
   startDate: string,
   endDate: string,
   periodType: string = 'custom',
-  dailyGoalMinutes: number = DEFAULT_DAILY_GOAL
+  dailyGoalMinutes: number = DEFAULT_DAILY_GOAL,
+  cloudRecords?: StudyRecord[]
 ): StatisticsResult {
   const start = parseDateStr(startDate)
   const end = parseDateStr(endDate)
@@ -243,7 +245,7 @@ export function computeStatistics(
   const prevStart = new Date(start.getTime() - lengthMs)
   prevStart.setHours(0, 0, 0, 0)
 
-  const allRecords = getLocalStorageData(STORAGE_KEYS.STUDY_RECORDS) as StudyRecord[]
+  const allRecords = cloudRecords ?? (getLocalStorageData(STORAGE_KEYS.STUDY_RECORDS) as StudyRecord[])
 
   const records = allRecords.filter(r => {
     const d = r.studyDate instanceof Date ? r.studyDate : new Date(r.studyDate)

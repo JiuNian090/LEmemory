@@ -531,6 +531,28 @@ page {
   margin-left: 20rpx;
 }
 
+/* 实时计时器 */
+.study-timer {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--primary-dark);
+  background: rgba(52, 211, 153, 0.1);
+  padding: 8rpx 20rpx;
+  border-radius: 20rpx;
+  margin-left: 16rpx;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1rpx;
+}
+
+/* 深色模式：study-timer */
+@media (prefers-color-scheme: dark) {
+  .study-timer {
+    background: rgba(52, 211, 153, 0.15);
+    color: #6ee7b7;
+  }
+}
+
 /* 深色模式：study-exit */
 @media (prefers-color-scheme: dark) {
   .study-exit {

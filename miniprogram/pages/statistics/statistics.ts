@@ -10,8 +10,11 @@ import {
   drawPieChart
 } from '../../utils/charts'
 import { computeStatistics } from '../../utils/statistics'
-import type { PeriodType, StatisticsResult, PieSlice } from '../../utils/types'
+import type { PeriodType, StatisticsResult, PieSlice, StudyRecord } from '../../utils/types'
 import { enableShareMenu } from '../../utils/share'
+import type { IAppOption } from '../../utils/types'
+
+const app = getApp<IAppOption>()
 
 /** 获取设备像素比（带运行时降级） */
 function getDPR(): number {
@@ -88,8 +91,9 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
   },
 
   onShow() {
-    // 每次显示都刷新一次（响应新增学习记录）
-    this.loadStatistics()
+    // 每次显示轻量刷新（无 loading），入参无变化则跳过
+    this.lastInput = null // 清除缓存以强制刷新
+    this.loadStatistics(false)
   },
 
   onUnload() {
@@ -104,18 +108,44 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
   // 当前统计数据缓存
   currentResult: null as StatisticsResult | null,
 
-  loadStatistics() {
+  /** 缓存上次入参，无变化时跳过重算 */
+  lastInput: null as { startDate: string; endDate: string; dailyGoalMinutes: number } | null,
+
+  async loadStatistics(showLoading: boolean = false) {
     const { startDate, endDate, dailyGoalMinutes, activeQuickBtn } = this.data
     if (!startDate || !endDate) return
 
+    // 入参无变化且已有结果，跳过重算
+    const input = { startDate, endDate, dailyGoalMinutes }
+    if (
+      this.currentResult && 
+      this.lastInput &&
+      this.lastInput.startDate === input.startDate &&
+      this.lastInput.endDate === input.endDate &&
+      this.lastInput.dailyGoalMinutes === input.dailyGoalMinutes
+    ) {
+      return
+    }
+    this.lastInput = input
+
     try {
-      wx.showLoading({ title: '计算中...' })
+      if (showLoading) {
+        wx.showLoading({ title: '计算中...' })
+      }
+
+      // 优先从云端拉取学习记录
+      let cloudRecords: StudyRecord[] | undefined
+      const username = app.globalData.userInfo?.username
+      if (username) {
+        cloudRecords = await this.fetchCloudRecords(startDate, endDate)
+      }
 
       const data = computeStatistics(
         startDate,
         endDate,
         activeQuickBtn || 'custom',
-        dailyGoalMinutes
+        dailyGoalMinutes,
+        cloudRecords  // 传入云端记录，未获取到时 fallback 到本地
       )
 
       this.currentResult = data
@@ -147,9 +177,13 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
       wx.nextTick(() => this.drawAllCharts())
     } catch (err) {
       console.error('[StatisticsPage] 计算失败', err)
-      wx.showToast({ title: '计算失败', icon: 'none' })
+      if (showLoading) {
+        wx.showToast({ title: '计算失败', icon: 'none' })
+      }
     } finally {
-      wx.hideLoading()
+      if (showLoading) {
+        wx.hideLoading()
+      }
     }
   },
 
@@ -251,7 +285,8 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
       activeQuickBtn: type,
       periodLabel: labelMap[type]
     })
-    this.loadStatistics()
+    this.lastInput = null // 强制刷新
+    this.loadStatistics(true)
   },
 
   onDateChange(e: WechatMiniprogram.TouchEvent) {
@@ -262,7 +297,8 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
       activeQuickBtn: '',
       periodLabel: '周期'
     } as any)
-    this.loadStatistics()
+    this.lastInput = null
+    this.loadStatistics(true)
   },
 
   onSetGoalTap() {
@@ -280,7 +316,8 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
         }
         this.saveGoalToStorage(n)
         this.setData({ dailyGoalMinutes: n })
-        this.loadStatistics()
+        this.lastInput = null
+        this.loadStatistics(true)
       }
     })
   },
@@ -300,6 +337,35 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
     } catch (err) {
       console.error('[StatisticsPage] 保存目标失败', err)
     }
+  },
+
+  /**
+   * 从云端拉取学习记录
+   */
+  async fetchCloudRecords(startDate: string, endDate: string): Promise<StudyRecord[] | undefined> {
+    const username = app.globalData.userInfo?.username
+    if (!username) return
+
+    try {
+      const { result } = await wx.cloud.callFunction({
+        name: 'study_sync',
+        data: {
+          action: 'getRecords',
+          username,
+          startDate,
+          endDate
+        }
+      })
+      const res = result as { success: boolean; data: StudyRecord[] }
+      if (res.success) {
+        console.log('[StatisticsPage] 拉取云端记录', res.data.length, '条')
+        return res.data
+      }
+      console.warn('[StatisticsPage] 云端拉取失败，使用本地数据', res)
+    } catch (err) {
+      console.error('[StatisticsPage] 云端拉取异常，使用本地数据', err)
+    }
+    return undefined
   },
 
   // 图表触摸事件（占位）
