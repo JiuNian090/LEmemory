@@ -4,11 +4,38 @@
     <text class="loading-text">加载卡牌组中...</text>
   </view>
 
-  <!-- 加载失败 -->
-  <view wx:elif="{{loadError}}" class="error-container">
-    <text class="error-icon">😵</text>
-    <text class="error-text">{{loadError}}</text>
-    <button class="retry-btn" bindtap="loadSharedGroup">重新加载</button>
+  <!-- 加载失败 - 显示 hub 选项 -->
+  <view wx:elif="{{loadError && mode === 'hub'}}" class="hub-container">
+    <view class="hub-header">
+      <text class="hub-icon">📥</text>
+      <text class="hub-title">导入卡牌</text>
+      <text class="hub-desc">选择一种方式导入卡牌数据</text>
+    </view>
+
+    <view class="hub-options">
+      <view class="hub-option" bindtap="importFromFile">
+        <text class="hub-option-icon">📁</text>
+        <view class="hub-option-texts">
+          <text class="hub-option-title">从文件导入</text>
+          <text class="hub-option-desc">选择好友分享的卡牌文件（.json）</text>
+        </view>
+        <text class="hub-option-arrow">›</text>
+      </view>
+
+      <view class="hub-option" bindtap="importFromClipboard">
+        <text class="hub-option-icon">📋</text>
+        <view class="hub-option-texts">
+          <text class="hub-option-title">从剪贴板导入</text>
+          <text class="hub-option-desc">粘贴卡牌 JSON 数据导入</text>
+        </view>
+        <text class="hub-option-arrow">›</text>
+      </view>
+    </view>
+
+    <view class="hub-tip">
+      <text class="hub-tip-icon">💡</text>
+      <text class="hub-tip-text">在卡牌详情页点击「分享卡牌」→「文件分享」，将卡牌导出为文件后发送给好友</text>
+    </view>
   </view>
 
   <!-- 导入成功 -->
@@ -18,21 +45,21 @@
     <text class="success-desc">即将跳转到卡牌组</text>
   </view>
 
-  <!-- 正常内容 -->
-  <block wx:else>
+  <!-- 正常内容（有卡牌数据可导入） -->
+  <block wx:elif="{{mode === 'data' && cards.length > 0}}">
     <!-- 卡牌组信息 -->
     <view class="group-info-card">
       <view class="group-icon">📚</view>
       <view class="group-details">
         <view class="group-title">{{group.title}}</view>
-        <view class="group-meta">共 {{group.cardCount}} 张卡牌</view>
+        <view class="group-meta">共 {{cards.length}} 张卡牌</view>
       </view>
     </view>
 
     <!-- 卡牌列表 -->
     <view class="section-title">卡牌预览</view>
     <view class="card-list">
-      <view wx:for="{{cards}}" wx:key="cardId" class="card-item">
+      <view wx:for="{{cards}}" wx:key="front" class="card-item">
         <view class="card-number">{{index + 1}}</view>
         <view class="card-q">
           <text class="label">Q:</text>
@@ -54,6 +81,13 @@
       <text class="import-btn-text">导入到我的卡牌组</text>
     </view>
   </block>
+
+  <!-- 加载错误且有 data 模式 -->
+  <view wx:elif="{{loadError}}" class="error-container">
+    <text class="error-icon">😵</text>
+    <text class="error-text">{{loadError}}</text>
+    <button class="retry-btn" bindtap="goHome">返回首页</button>
+  </view>
 
   <!-- 导入中遮罩 -->
   <view wx:if="{{importing}}" class="importing-overlay">

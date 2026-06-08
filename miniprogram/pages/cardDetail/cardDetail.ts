@@ -910,17 +910,19 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
 
   /**
    * 分享卡牌组（小程序消息卡片）
+   * 注：实际卡牌数据分享请使用「文件分享」方式
    */
   onShareAppMessage() {
+    const { title, totalCards } = this.data
     return {
-      title: this.data.title,
-      path: `/pages/shareImport/shareImport?groupId=${this.data.groupId}`
+      title: `${title} - ${totalCards}张卡牌`,
+      path: `/pages/study/study`
     }
   },
 
   onShareTimeline() {
     return {
-      title: this.data.title
+      title: `${this.data.title} - ${this.data.totalCards}张卡牌`
     }
   },
 
