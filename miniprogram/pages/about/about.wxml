@@ -3,7 +3,6 @@
   <view class="page-header">
     <view class="header-content">
       <text class="header-title">{{appName}}</text>
-      <text class="header-version">v{{appVersion}}</text>
       <text class="header-subtitle">{{appDesc}}</text>
     </view>
   </view>
@@ -18,13 +17,14 @@
     </view>
     <view class="section-body">
       <view class="timeline">
-        <view class="timeline-item" wx:for="{{changelog}}" wx:key="version" wx:for-item="version">
+        <view class="timeline-item {{index === 0 ? 'latest' : ''}}" wx:for="{{changelog}}" wx:key="version" wx:for-item="version" wx:for-index="index">
           <!-- 时间线节点 -->
-          <view class="timeline-dot"></view>
+          <view class="timeline-dot {{index === 0 ? 'dot-latest' : ''}}"></view>
           <!-- 内容卡片 -->
           <view class="timeline-content">
             <view class="version-header">
               <text class="version-tag">v{{version.version}}</text>
+              <text class="latest-badge" wx:if="{{index === 0}}">最新</text>
               <text class="version-date">{{version.date}}</text>
             </view>
             <view class="change-group" wx:for="{{version.changes}}" wx:key="type" wx:for-item="group">

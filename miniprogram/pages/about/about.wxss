@@ -99,17 +99,16 @@ page {
   padding: 20rpx 0;
 }
 
-/* 左侧竖线 */
+/* 左侧竖线 - 灰色 */
 .timeline::before {
   content: '';
   position: absolute;
-  left: 12rpx;
+  left: 16rpx;
   top: 30rpx;
   bottom: 30rpx;
   width: 4rpx;
-  background: var(--primary-color);
+  background: #d0d0d0;
   border-radius: 4rpx;
-  opacity: 0.3;
 }
 
 .timeline-item {
@@ -122,7 +121,7 @@ page {
   padding-bottom: 0;
 }
 
-/* 时间线圆点 */
+/* 时间线圆点 - 默认灰色（非最新版本） */
 .timeline-dot {
   position: absolute;
   left: 4rpx;
@@ -130,10 +129,26 @@ page {
   width: 20rpx;
   height: 20rpx;
   border-radius: 50%;
-  background: var(--primary-color);
+  background: #d0d0d0;
   border: 4rpx solid var(--card-bg);
-  box-shadow: 0 0 0 4rpx var(--primary-color);
+  box-shadow: 0 0 0 4rpx #d0d0d0;
   z-index: 1;
+}
+
+/* 最新版本圆点 - 绿色 + 呼吸灯动画 */
+.timeline-dot.dot-latest {
+  background: var(--primary-color);
+  box-shadow: 0 0 0 4rpx var(--primary-color);
+  animation: breathe 2s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% {
+    box-shadow: 0 0 0 4rpx var(--primary-color), 0 0 0 0 rgba(52, 211, 153, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 4rpx var(--primary-color), 0 0 0 12rpx rgba(52, 211, 153, 0);
+  }
 }
 
 /* 时间线内容卡片 */
@@ -159,6 +174,18 @@ page {
 .version-date {
   font-size: 24rpx;
   color: var(--text-tertiary);
+}
+
+/* 最新版本标签 */
+.latest-badge {
+  font-size: 20rpx;
+  font-weight: 600;
+  color: #fff;
+  background: var(--primary-color);
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+  line-height: 1.4;
+  margin-left: -4rpx;
 }
 
 /* 变更组 */
@@ -207,11 +234,28 @@ page {
 /* ========== 深色模式适配 ========== */
 @media (prefers-color-scheme: dark) {
   .timeline::before {
-    opacity: 0.5;
+    background: #555555;
   }
 
   .timeline-dot {
+    background: #555555;
     border-color: var(--card-bg);
+    box-shadow: 0 0 0 4rpx #555555;
+  }
+
+  .timeline-dot.dot-latest {
+    background: var(--primary-color);
+    box-shadow: 0 0 0 4rpx var(--primary-color);
+    animation: breathe-dark 2s ease-in-out infinite;
+  }
+
+  @keyframes breathe-dark {
+    0%, 100% {
+      box-shadow: 0 0 0 4rpx var(--primary-color), 0 0 0 0 rgba(52, 211, 153, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 4rpx var(--primary-color), 0 0 0 12rpx rgba(52, 211, 153, 0);
+    }
   }
 
   .version-tag {

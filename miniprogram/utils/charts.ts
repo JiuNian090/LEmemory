@@ -11,7 +11,7 @@ const PADDING = { top: 20, right: 16, bottom: 30, left: 40 }
 
 function getDPR(): number {
   try {
-    return wx.getSystemInfoSync().pixelRatio
+    return wx.getWindowInfo().pixelRatio
   } catch {
     return 2
   }
@@ -42,7 +42,6 @@ function drawEmptyState(ctx: any, w: number, h: number, theme: ThemeColors, text
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(text, w / 2, h / 2)
-  ctx.draw()
 }
 
 /**
@@ -142,7 +141,6 @@ export function drawLineChart(
     }
   })
 
-  ctx.draw()
 }
 
 /**
@@ -227,7 +225,6 @@ export function drawHeatmap(
     ctx.fillText(weekdayLabels[i], leftPad - 4, y)
   })
 
-  ctx.draw()
 }
 
 /**
@@ -301,7 +298,6 @@ export function drawMonthlyBarChart(
     ctx.fillText(monthLabel, x + barWidth / 2, PADDING.top + plotH + 6)
   })
 
-  ctx.draw()
 }
 
 /**
@@ -378,5 +374,4 @@ export function drawPieChart(
     ctx.fillText(`${label} ${Math.round(slice.percentage)}%`, legendX + 14, y)
   })
 
-  ctx.draw()
 }

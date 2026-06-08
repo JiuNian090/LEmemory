@@ -162,7 +162,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
         const canvasInfo = res[0]
         if (!canvasInfo || !canvasInfo.node) return
         const canvas = canvasInfo.node as WechatMiniprogram.Canvas
-        const dpr = wx.getSystemInfoSync().pixelRatio
+        const dpr = wx.getWindowInfo().pixelRatio
         const width = (canvasInfo.width || 0) * dpr
         const height = (canvasInfo.height || 0) * dpr
         if (width === 0 || height === 0) return
@@ -180,7 +180,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
         const canvasInfo = res[0]
         if (!canvasInfo || !canvasInfo.node) return
         const canvas = canvasInfo.node as WechatMiniprogram.Canvas
-        const dpr = wx.getSystemInfoSync().pixelRatio
+        const dpr = wx.getWindowInfo().pixelRatio
         const width = (canvasInfo.width || 0) * dpr
         const height = (canvasInfo.height || 0) * dpr
         if (width === 0 || height === 0) return
@@ -198,7 +198,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
         const canvasInfo = res[0]
         if (!canvasInfo || !canvasInfo.node) return
         const canvas = canvasInfo.node as WechatMiniprogram.Canvas
-        const dpr = wx.getSystemInfoSync().pixelRatio
+        const dpr = wx.getWindowInfo().pixelRatio
         const width = (canvasInfo.width || 0) * dpr
         const height = (canvasInfo.height || 0) * dpr
         if (width === 0 || height === 0) return
@@ -214,7 +214,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
         const canvasInfo = res[0]
         if (!canvasInfo || !canvasInfo.node) return
         const canvas = canvasInfo.node as WechatMiniprogram.Canvas
-        const dpr = wx.getSystemInfoSync().pixelRatio
+        const dpr = wx.getWindowInfo().pixelRatio
         const width = (canvasInfo.width || 0) * dpr
         const height = (canvasInfo.height || 0) * dpr
         if (width === 0 || height === 0) return

@@ -62,8 +62,8 @@ let cachedTheme: 'light' | 'dark' | null = null
  */
 function detectTheme(): 'light' | 'dark' {
   try {
-    const info = wx.getSystemInfoSync()
-    return info.theme === 'dark' ? 'dark' : 'light'
+    const info = wx.getAppBaseInfo()
+    return (info.theme === 'dark') ? 'dark' : 'light'
   } catch {
     return 'light'
   }
