@@ -3,12 +3,20 @@ import { formatDate } from '../../utils/time'
 import { showErrorToast } from '../../utils/error'
 import { enableShareMenu } from '../../utils/share'
 
+// 预选表情列表
+const EMOJIS = [
+  '📚', '🎯', '💡', '🌟', '🔥', '💪', '🎨', '🎵',
+  '🧠', '💎', '🏆', '⭐', '🌈', '🎈', '💫', '✨',
+  '📖', '✏️', '📝', '🔍', '🎮', '🌍', '🔬', '📐'
+]
+
 interface CardGroupItem {
   _id?: string
   groupId: string
   userId?: string
   title: string
   description?: string
+  emoji?: string
   createTime: any
   updateTime: any
   _openid?: string
@@ -20,6 +28,9 @@ interface StudyPageData {
   showCreateDialog: boolean
   newTitle: string
   newDesc: string
+  selectedEmoji: string
+  showEmojiPicker: boolean
+  emojis: string[]
   deleteGroupId: string
   deleteGroupTitle: string
   swipeIndex: number
@@ -33,6 +44,9 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
     showCreateDialog: false,
     newTitle: '',
     newDesc: '',
+    selectedEmoji: '📚',
+    showEmojiPicker: false,
+    emojis: EMOJIS,
     deleteGroupId: '',
     deleteGroupTitle: '',
     swipeIndex: -1,
@@ -102,7 +116,9 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
     this.setData({
       showCreateDialog: true,
       newTitle: '',
-      newDesc: ''
+      newDesc: '',
+      selectedEmoji: '📚',
+      showEmojiPicker: false
     })
   },
 
@@ -112,6 +128,26 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
   closeDialog() {
     this.setData({
       showCreateDialog: false
+    })
+  },
+
+  /**
+   * 切换表情选择器
+   */
+  toggleEmojiPicker() {
+    this.setData({
+      showEmojiPicker: !this.data.showEmojiPicker
+    })
+  },
+
+  /**
+   * 选择表情
+   */
+  onEmojiSelect(e: WechatMiniprogram.TouchEvent) {
+    const emoji = e.currentTarget.dataset.emoji as string
+    this.setData({
+      selectedEmoji: emoji,
+      showEmojiPicker: false
     })
   },
 
@@ -137,10 +173,10 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
    * 确认创建卡牌组
    */
   confirmCreate() {
-    const { newTitle, newDesc } = this.data
-    
+    const { newTitle, newDesc, selectedEmoji } = this.data
+
     console.log('[StudyPage] 确认创建，标题:', `"${newTitle}"`)
-    
+
     if (!newTitle.trim()) {
       wx.showToast({
         title: '请输入标题',
@@ -149,13 +185,13 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
       return
     }
 
-    this.addCardGroup(newTitle, newDesc)
+    this.addCardGroup(newTitle, newDesc, selectedEmoji)
   },
 
   /**
    * 添加卡牌组到数据库
    */
-  async addCardGroup(title: string, description: string) {
+  async addCardGroup(title: string, description: string, emoji: string) {
     try {
       wx.showLoading({ title: '创建中...' })
 
@@ -165,6 +201,7 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
           groupId: generateId(),
           title: title.trim(),
           description: description.trim(),
+          emoji: emoji,
           createTime: new Date(),
           updateTime: new Date()
         }

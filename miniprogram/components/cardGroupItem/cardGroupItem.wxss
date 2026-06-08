@@ -4,6 +4,12 @@
   padding: 30rpx;
 }
 
+.item-emoji {
+  font-size: 48rpx;
+  margin-bottom: 12rpx;
+  display: block;
+}
+
 .item-title {
   font-size: 32rpx;
   font-weight: 500;

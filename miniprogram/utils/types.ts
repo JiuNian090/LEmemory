@@ -31,6 +31,8 @@ export interface CardGroup {
   userId: string
   title: string
   description?: string
+  /** 表情图标，如'📚'、'🎯'等，默认'🎴' */
+  emoji?: string
   createTime: Date
   updateTime: number
 }

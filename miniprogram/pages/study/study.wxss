@@ -301,6 +301,62 @@
   margin-bottom: 12rpx;
 }
 
+/* ========== 表情选择器 ========== */
+.emoji-selector {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 72rpx;
+  padding: 20rpx;
+  background: var(--bg-color);
+  border-radius: 12rpx;
+  font-size: 36rpx;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.selected-emoji {
+  font-size: 40rpx;
+}
+
+.emoji-arrow {
+  font-size: 24rpx;
+  color: var(--text-tertiary);
+}
+
+.emoji-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  padding: 20rpx;
+  margin-top: 12rpx;
+  background: var(--bg-color);
+  border-radius: 12rpx;
+}
+
+.emoji-item {
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+  border-radius: 12rpx;
+  background: var(--card-bg);
+  transition: all 0.2s;
+}
+
+.emoji-item:active {
+  transform: scale(0.9);
+  background: var(--border-color);
+}
+
+.emoji-item.active {
+  background: var(--primary-color);
+  box-shadow: 0 2rpx 8rpx rgba(52, 211, 153, 0.3);
+}
+
 .input-field {
   width: 100%;
   height: 72rpx;

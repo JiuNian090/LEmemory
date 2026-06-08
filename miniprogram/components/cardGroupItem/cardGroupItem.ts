@@ -11,6 +11,10 @@ Component({
     updateTime: {
       type: String,
       value: ''
+    },
+    emoji: {
+      type: String,
+      value: '🎴'
     }
   }
 })

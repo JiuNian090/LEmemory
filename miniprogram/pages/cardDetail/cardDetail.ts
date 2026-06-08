@@ -1,4 +1,4 @@
-import { cardCollection, favoriteCollection, studyRecordCollection, generateId, deleteCardGroup } from '../../utils/db'
+import { cardGroupCollection, cardCollection, favoriteCollection, studyRecordCollection, generateId, deleteCardGroup } from '../../utils/db'
 import { parseDate } from '../../utils/time'
 import { showErrorToast } from '../../utils/error'
 import type { IAppOption } from '../../utils/types'
@@ -41,15 +41,16 @@ interface CardDetailPageData {
   groupId: string
   title: string
   description: string
+  groupEmoji: string
   currentTab: number
   tabs: string[]
-  cards: CardItem[]
-  displayCards: CardItem[]
-  favorites: FavoriteItem[]
+  cards: any[]
+  displayCards: any[]
+  favorites: any[]
   currentCardIndex: number
   isFlipped: boolean
   cardAnim: string
-  studyStartTime: number | null
+  studyStartTime: Date | null | number
   showCardDialog: boolean
   dialogMode: 'add' | 'edit'
   editCardId: string
@@ -78,6 +79,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     groupId: '',
     title: '',
     description: '',
+    groupEmoji: '🎴',
     currentTab: 0,
     tabs: ['学习', '目录', '卡牌', '收藏'],
     cards: [],
@@ -130,6 +132,10 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     wx.setNavigationBarTitle({
       title: title || '卡牌详情'
     })
+
+    // 从卡牌组加载 emoji
+    this.loadGroupEmoji(options.groupId)
+
     this.loadCards()
     this.loadFavorites()
 
@@ -146,8 +152,24 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     if (this.data.isStudying) {
       this.startStudyTimer()
     } else {
+      this.loadGroupEmoji(this.data.groupId)
       this.loadCards()
       this.loadFavorites()
+    }
+  },
+
+  /**
+   * 加载卡牌组表情图标
+   */
+  async loadGroupEmoji(groupId: string) {
+    if (!groupId) return
+    try {
+      const { data } = await cardGroupCollection.where({ groupId }).get()
+      if (data.length > 0 && data[0].emoji) {
+        this.setData({ groupEmoji: data[0].emoji })
+      }
+    } catch {
+      // 静默失败，使用默认 emoji
     }
   },
 
@@ -429,7 +451,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
    */
   stopStudyTimer() {
     if (this.data.studyStartTime) {
-      const duration = Math.floor((Date.now() - this.data.studyStartTime) / 1000)
+      const duration = Math.floor((Date.now() - Number(this.data.studyStartTime)) / 1000)
       this.saveStudyRecord(duration)
     }
   },
