@@ -1,5 +1,6 @@
 import { IAppOption } from '../../utils/types'
 import { syncManager } from '../../utils/sync'
+import { enableShareMenu } from '../../utils/share'
 
 const app = getApp<IAppOption>()
 
@@ -13,6 +14,7 @@ Page<MinePageData, WechatMiniprogram.IAnyObject>({
   },
 
   onLoad() {
+    enableShareMenu()
     this.loadUserInfo()
   },
 
@@ -92,6 +94,12 @@ Page<MinePageData, WechatMiniprogram.IAnyObject>({
     })
   },
 
+  goToAbout() {
+    wx.navigateTo({
+      url: '/pages/about/about'
+    })
+  },
+
   openCustomerService() {
     (wx as any).openCustomerServiceChat({
       extInfo: { url: '' },
@@ -106,5 +114,18 @@ Page<MinePageData, WechatMiniprogram.IAnyObject>({
         })
       }
     })
+  },
+
+  onShareAppMessage() {
+    return {
+      title: 'LEmemory - 我的',
+      path: '/pages/mine/mine'
+    }
+  },
+
+  onShareTimeline() {
+    return {
+      title: 'LEmemory - 我的'
+    }
   }
 })

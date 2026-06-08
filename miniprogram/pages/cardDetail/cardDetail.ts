@@ -2,6 +2,7 @@ import { cardCollection, favoriteCollection, studyRecordCollection, generateId, 
 import { parseDate } from '../../utils/time'
 import { showErrorToast } from '../../utils/error'
 import type { IAppOption } from '../../utils/types'
+import { enableShareMenu } from '../../utils/share'
 
 const app = getApp<IAppOption>()
 
@@ -117,6 +118,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   pageSize: 10,
 
   onLoad(options: any) {
+    enableShareMenu()
     const title = options.title ? decodeURIComponent(options.title) : ''
     const description = options.description ? decodeURIComponent(options.description) : ''
     
@@ -913,6 +915,12 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     return {
       title: this.data.title,
       path: `/pages/shareImport/shareImport?groupId=${this.data.groupId}`
+    }
+  },
+
+  onShareTimeline() {
+    return {
+      title: this.data.title
     }
   },
 

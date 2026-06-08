@@ -1,4 +1,5 @@
 import { cardGroupCollection, cardCollection, generateId } from '../../utils/db'
+import { enableShareMenu } from '../../utils/share'
 
 interface SharedCard {
   cardId: string
@@ -33,6 +34,7 @@ Page<ShareImportPageData, WechatMiniprogram.IAnyObject>({
   },
 
   onLoad(options: any) {
+    enableShareMenu()
     const groupId = options.groupId
     if (groupId) {
       this.loadSharedGroup(groupId)
@@ -111,6 +113,19 @@ Page<ShareImportPageData, WechatMiniprogram.IAnyObject>({
         title: '导入失败',
         icon: 'none'
       })
+    }
+  },
+
+  onShareAppMessage() {
+    return {
+      title: this.data.group?.title || 'LEmemory - 分享卡牌',
+      path: `/pages/shareImport/shareImport?groupId=${this.data.group?.groupId || ''}`
+    }
+  },
+
+  onShareTimeline() {
+    return {
+      title: this.data.group?.title || 'LEmemory - 分享卡牌'
     }
   }
 })

@@ -1,6 +1,7 @@
 import { cardGroupCollection, generateId, deleteCardGroup } from '../../utils/db'
 import { formatDate } from '../../utils/time'
 import { showErrorToast } from '../../utils/error'
+import { enableShareMenu } from '../../utils/share'
 
 interface CardGroupItem {
   _id?: string
@@ -36,6 +37,10 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
     deleteGroupTitle: '',
     swipeIndex: -1,
     startX: 0
+  },
+
+  onLoad() {
+    enableShareMenu()
   },
 
   onShow() {
@@ -301,6 +306,19 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
       })
     } finally {
       wx.hideLoading()
+    }
+  },
+
+  onShareAppMessage() {
+    return {
+      title: 'LEmemory - 记忆卡片学习',
+      path: '/pages/study/study'
+    }
+  },
+
+  onShareTimeline() {
+    return {
+      title: 'LEmemory - 记忆卡片学习'
     }
   }
 })

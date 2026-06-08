@@ -11,6 +11,7 @@ import {
 } from '../../utils/charts'
 import { computeStatistics } from '../../utils/statistics'
 import type { PeriodType, StatisticsResult, PieSlice } from '../../utils/types'
+import { enableShareMenu } from '../../utils/share'
 
 interface StatisticsPageData {
   startDate: string
@@ -58,6 +59,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
   },
 
   onLoad() {
+    enableShareMenu()
     const goal = this.loadGoalFromStorage()
     this.setData({ dailyGoalMinutes: goal })
 
@@ -293,5 +295,18 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
 
   // 图表触摸事件（占位）
   onChartTap() {},
-  onHeatmapTap() {}
+  onHeatmapTap() {},
+
+  onShareAppMessage() {
+    return {
+      title: 'LEmemory 学习统计',
+      path: '/pages/statistics/statistics'
+    }
+  },
+
+  onShareTimeline() {
+    return {
+      title: 'LEmemory 学习统计'
+    }
+  }
 })
