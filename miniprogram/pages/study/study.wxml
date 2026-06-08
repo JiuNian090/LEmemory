@@ -49,10 +49,20 @@
                 <view class="card-arrow">›</view>
               </view>
             </view>
-            <!-- 删除按钮（固定右侧） -->
-            <view class="swipe-delete-btn" catchtap="showDeleteConfirm" data-groupid="{{item.groupId}}" data-title="{{item.title}}">
-              <text class="delete-icon">🗑️</text>
-              <text class="delete-text">删除</text>
+            <!-- 操作按钮组（固定右侧） -->
+            <view class="swipe-actions">
+              <view class="swipe-btn swipe-btn-edit" catchtap="showEditDialog"
+                data-groupid="{{item.groupId}}"
+                data-title="{{item.title}}"
+                data-desc="{{item.description}}"
+                data-emoji="{{item.emoji}}">
+                <text class="action-icon">✏️</text>
+                <text class="action-text">编辑</text>
+              </view>
+              <view class="swipe-btn swipe-btn-delete" catchtap="showDeleteConfirm" data-groupid="{{item.groupId}}" data-title="{{item.title}}">
+                <text class="action-icon">🗑️</text>
+                <text class="action-text">删除</text>
+              </view>
             </view>
           </view>
         </block>
@@ -101,6 +111,43 @@
       <view class="modal-footer">
         <button class="btn btn-cancel" bindtap="closeDialog">取消</button>
         <button class="btn btn-confirm" bindtap="confirmCreate">创建</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 编辑卡牌组弹窗 -->
+  <view class="modal-overlay" wx:if="{{showEditDialog}}" bindtap="closeDialog">
+    <view class="modal-content" catchtap="stopPropagation">
+      <view class="modal-header">
+        <text class="modal-title">编辑卡牌组</text>
+      </view>
+      <view class="modal-body">
+        <view class="input-group">
+          <text class="input-label">表情图标</text>
+          <view class="emoji-selector" bindtap="toggleEmojiPicker">
+            <text class="selected-emoji">{{editEmoji}}</text>
+            <text class="emoji-arrow">{{showEmojiPicker ? '▲' : '▼'}}</text>
+          </view>
+          <view class="emoji-grid" wx:if="{{showEmojiPicker}}">
+            <block wx:for="{{emojis}}" wx:key="index">
+              <view class="emoji-item {{editEmoji === item ? 'active' : ''}}" bindtap="onEditEmojiSelect" data-emoji="{{item}}">
+                <text>{{item}}</text>
+              </view>
+            </block>
+          </view>
+        </view>
+        <view class="input-group">
+          <text class="input-label">标题 *</text>
+          <input class="input-field" placeholder="请输入卡牌组标题" value="{{editTitle}}" bindinput="onEditTitleInput" maxlength="30"/>
+        </view>
+        <view class="input-group">
+          <text class="input-label">描述</text>
+          <textarea class="textarea-field" placeholder="描述一下这个卡牌组（可选）" value="{{editDesc}}" bindinput="onEditDescInput" maxlength="100" auto-height/>
+        </view>
+      </view>
+      <view class="modal-footer">
+        <button class="btn btn-cancel" bindtap="closeDialog">取消</button>
+        <button class="btn btn-confirm" bindtap="confirmEdit">保存</button>
       </view>
     </view>
   </view>

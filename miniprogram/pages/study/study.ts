@@ -31,6 +31,11 @@ interface StudyPageData {
   selectedEmoji: string
   showEmojiPicker: boolean
   emojis: string[]
+  showEditDialog: boolean
+  editGroupId: string
+  editTitle: string
+  editDesc: string
+  editEmoji: string
   deleteGroupId: string
   deleteGroupTitle: string
   swipeIndex: number
@@ -47,6 +52,11 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
     selectedEmoji: '📚',
     showEmojiPicker: false,
     emojis: EMOJIS,
+    showEditDialog: false,
+    editGroupId: '',
+    editTitle: '',
+    editDesc: '',
+    editEmoji: '📚',
     deleteGroupId: '',
     deleteGroupTitle: '',
     swipeIndex: -1,
@@ -127,7 +137,8 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
    */
   closeDialog() {
     this.setData({
-      showCreateDialog: false
+      showCreateDialog: false,
+      showEditDialog: false
     })
   },
 
@@ -343,6 +354,107 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
       })
     } finally {
       wx.hideLoading()
+    }
+  },
+
+  /**
+   * 显示编辑弹窗
+   */
+  showEditDialog(e: WechatMiniprogram.TouchEvent) {
+    const { groupid, title, desc, emoji } = e.currentTarget.dataset
+    this.setData({
+      editGroupId: groupid,
+      editTitle: title || '',
+      editDesc: desc || '',
+      editEmoji: emoji || '📚',
+      showEditDialog: true,
+      showEmojiPicker: false,
+      swipeIndex: -1
+    })
+  },
+
+  /**
+   * 编辑 - 输入标题
+   */
+  onEditTitleInput(e: WechatMiniprogram.Input) {
+    this.setData({
+      editTitle: e.detail.value
+    })
+  },
+
+  /**
+   * 编辑 - 输入描述
+   */
+  onEditDescInput(e: WechatMiniprogram.Input) {
+    this.setData({
+      editDesc: e.detail.value
+    })
+  },
+
+  /**
+   * 编辑 - 选择表情
+   */
+  onEditEmojiSelect(e: WechatMiniprogram.TouchEvent) {
+    const emoji = e.currentTarget.dataset.emoji as string
+    this.setData({
+      editEmoji: emoji,
+      showEmojiPicker: false
+    })
+  },
+
+  /**
+   * 确认编辑卡牌组
+   */
+  confirmEdit() {
+    const { editGroupId, editTitle, editDesc, editEmoji } = this.data
+
+    if (!editTitle.trim()) {
+      wx.showToast({
+        title: '请输入标题',
+        icon: 'none'
+      })
+      return
+    }
+
+    this.updateCardGroup(editGroupId, editTitle.trim(), editDesc.trim(), editEmoji)
+  },
+
+  /**
+   * 更新卡牌组
+   */
+  async updateCardGroup(groupId: string, title: string, description: string, emoji: string) {
+    try {
+      wx.showLoading({ title: '更新中...' })
+
+      // 找到本地数据中的记录，获取 _id
+      const target = this.data.cardGroups.find(g => g.groupId === groupId)
+      if (!target || !target._id) {
+        wx.hideLoading()
+        wx.showToast({ title: '未找到该卡牌组', icon: 'none' })
+        return
+      }
+
+      await cardGroupCollection.doc(target._id).update({
+        data: {
+          title,
+          description,
+          emoji,
+          updateTime: new Date()
+        }
+      })
+
+      wx.hideLoading()
+      wx.showToast({
+        title: '更新成功',
+        icon: 'success'
+      })
+
+      this.setData({ showEditDialog: false })
+      this.loadCardGroups()
+    } catch (err: any) {
+      console.error('[StudyPage] 更新卡牌组失败', err)
+      wx.hideLoading()
+      showErrorToast(err)
     }
   },
 
