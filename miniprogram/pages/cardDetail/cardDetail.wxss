@@ -1,3 +1,23 @@
+/* 局部覆盖 CSS 变量 - 仅影响当前页面 */
+page {
+  --bg-color: #f0f4f3;
+  --text-primary: #1a1a2e;
+  --text-secondary: #5b6770;
+  --text-tertiary: #9aa6b0;
+  --border-color: #e8edec;
+}
+
+/* 深色模式变量覆盖 */
+@media (prefers-color-scheme: dark) {
+  page {
+    --bg-color: #1a1a1a;
+    --text-primary: #e5e5e5;
+    --text-secondary: #a3a3a3;
+    --text-tertiary: #737373;
+    --border-color: #333333;
+  }
+}
+
 .container {
   min-height: 100vh;
   background: var(--bg-color);
@@ -69,7 +89,6 @@
   align-items: center;
   gap: 20rpx;
   box-shadow: var(--shadow);
-  border-left: 6rpx solid var(--primary-color);
 }
 
 .group-icon {
@@ -79,8 +98,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--primary-light) 0%, #d1fae5 100%);
+  background: linear-gradient(135deg, var(--primary-light) 0%, #a7f3d0 100%);
   border-radius: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(52, 211, 153, 0.2);
+}
+
+/* 深色模式：group-icon */
+@media (prefers-color-scheme: dark) {
+  .group-icon {
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  }
 }
 
 .group-details {
@@ -100,13 +127,22 @@
 }
 
 .today-stats-card {
-  background: var(--card-bg);
+  background: linear-gradient(135deg, #ffffff 0%, #fafff9 100%);
   border-radius: 24rpx;
   padding: 30rpx;
   display: flex;
   align-items: center;
   justify-content: space-between;
   box-shadow: var(--shadow);
+  border: 1rpx solid rgba(52, 211, 153, 0.08);
+}
+
+/* 深色模式：today-stats-card */
+@media (prefers-color-scheme: dark) {
+  .today-stats-card {
+    background: linear-gradient(135deg, #262626 0%, #2a2a2a 100%);
+    border-color: rgba(52, 211, 153, 0.15);
+  }
 }
 
 .today-stats-card .stat-item {
@@ -123,15 +159,24 @@
 }
 
 .stat-value.today {
-  color: var(--warning-color);
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .stat-value.review {
-  color: var(--primary-color);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .stat-value.time {
-  color: var(--info-color);
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   font-size: 28rpx;
 }
 
@@ -143,7 +188,7 @@
 .stat-divider {
   width: 1rpx;
   height: 60rpx;
-  background: var(--border-color);
+  background: linear-gradient(180deg, transparent, var(--border-color), transparent);
 }
 
 /* ========== 学习按钮组 ========== */
@@ -155,13 +200,23 @@
 
 .study-btn {
   flex: 1;
-  border-radius: 50rpx;
-  padding: 30rpx;
+  border-radius: 40rpx;
+  padding: 24rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12rpx;
+  gap: 10rpx;
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.study-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 .study-btn:active {
@@ -179,11 +234,11 @@
 }
 
 .btn-icon {
-  font-size: 36rpx;
+  font-size: 28rpx;
 }
 
 .btn-text {
-  font-size: 32rpx;
+  font-size: 28rpx;
   font-weight: 600;
   color: var(--header-text);
 }
@@ -426,22 +481,43 @@
 }
 
 .progress-bar {
-  height: 12rpx;
+  height: 8rpx;
   background: var(--bg-color);
-  border-radius: 6rpx;
+  border-radius: 4rpx;
   overflow: hidden;
+  box-shadow: inset 0 1rpx 2rpx rgba(0, 0, 0, 0.05);
+}
+
+/* 深色模式：progress-bar */
+@media (prefers-color-scheme: dark) {
+  .progress-bar {
+    box-shadow: inset 0 1rpx 2rpx rgba(0, 0, 0, 0.2);
+  }
 }
 
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-  border-radius: 6rpx;
+  border-radius: 4rpx;
   transition: width 0.3s ease;
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 20rpx;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3));
+  border-radius: 4rpx;
 }
 
 .progress-text {
   font-size: 24rpx;
   color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .study-exit {
@@ -450,9 +526,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-color);
+  background: rgba(0, 0, 0, 0.04);
   border-radius: 50%;
   margin-left: 20rpx;
+}
+
+/* 深色模式：study-exit */
+@media (prefers-color-scheme: dark) {
+  .study-exit {
+    background: rgba(255, 255, 255, 0.08);
+  }
 }
 
 .exit-icon {
@@ -551,22 +634,32 @@
   width: 100%;
   min-height: 500rpx;
   backface-visibility: hidden;
-  background: var(--card-bg);
-  border: 1rpx solid var(--border-color);
+  background: linear-gradient(145deg, #ffffff 0%, #fafff9 100%);
+  border: 1.5px solid rgba(52, 211, 153, 0.12);
   border-radius: 24rpx;
-  padding: 60rpx 40rpx;
+  padding: 44rpx 28rpx;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  box-shadow: var(--shadow-hover);
+  box-shadow: 0 8rpx 32rpx rgba(52, 211, 153, 0.08), 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
 }
 
 .card-face.back {
   transform: rotateY(-180deg);
-  background: var(--card-bg);
-  border: 2rpx solid var(--primary-color);
+  background: linear-gradient(145deg, #ffffff 0%, #fafff9 100%);
+  border: 1.5px solid rgba(52, 211, 153, 0.12);
+}
+
+/* 深色模式：card-face */
+@media (prefers-color-scheme: dark) {
+  .card-face,
+  .card-face.back {
+    background: linear-gradient(145deg, #262626 0%, #2d2d2d 100%);
+    border-color: rgba(52, 211, 153, 0.2);
+    box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.2), 0 2rpx 8rpx rgba(0, 0, 0, 0.3);
+  }
 }
 
 .mastery-buttons {
@@ -583,9 +676,18 @@
   align-items: center;
   gap: 8rpx;
   padding: 24rpx 8rpx;
-  border-radius: 16rpx;
-  border: 2rpx solid transparent;
+  border-radius: 20rpx;
+  border: 1.5px solid transparent;
   transition: all 0.2s ease;
+  background: var(--card-bg);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.03);
+}
+
+/* 深色模式：mastery-btn */
+@media (prefers-color-scheme: dark) {
+  .mastery-btn {
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+  }
 }
 
 .mastery-btn:active {
@@ -612,7 +714,7 @@
 }
 
 .mastery-btn-new.active {
-  background: rgba(156, 163, 175, 0.25);
+  background: rgba(156, 163, 175, 0.2);
   border-color: #9ca3af;
 }
 
@@ -623,7 +725,7 @@
 
 .mastery-btn-learning {
   background: rgba(251, 191, 36, 0.1);
-  border-color: rgba(251, 191, 36, 0.3);
+  border-color: rgba(251, 191, 36, 0.25);
 }
 
 .mastery-btn-learning .mastery-btn-label {
@@ -631,7 +733,7 @@
 }
 
 .mastery-btn-learning.active {
-  background: rgba(251, 191, 36, 0.25);
+  background: rgba(251, 191, 36, 0.2);
   border-color: #fbbf24;
 }
 
@@ -642,7 +744,7 @@
 
 .mastery-btn-mastered {
   background: rgba(52, 211, 153, 0.1);
-  border-color: rgba(52, 211, 153, 0.3);
+  border-color: rgba(52, 211, 153, 0.25);
 }
 
 .mastery-btn-mastered .mastery-btn-label {
@@ -650,8 +752,9 @@
 }
 
 .mastery-btn-mastered.active {
-  background: rgba(52, 211, 153, 0.25);
+  background: rgba(52, 211, 153, 0.2);
   border-color: var(--primary-color);
+  box-shadow: 0 4rpx 16rpx rgba(52, 211, 153, 0.2);
 }
 
 .mastery-btn-mastered.active .mastery-btn-label {
@@ -661,7 +764,7 @@
 
 .mastery-btn-difficult {
   background: rgba(248, 113, 113, 0.1);
-  border-color: rgba(248, 113, 113, 0.3);
+  border-color: rgba(248, 113, 113, 0.25);
 }
 
 .mastery-btn-difficult .mastery-btn-label {
@@ -669,7 +772,7 @@
 }
 
 .mastery-btn-difficult.active {
-  background: rgba(248, 113, 113, 0.25);
+  background: rgba(248, 113, 113, 0.2);
   border-color: var(--danger-color);
 }
 
@@ -680,10 +783,15 @@
 
 .card-label {
   font-size: 24rpx;
-  color: var(--text-tertiary);
+  color: var(--primary-dark);
   margin-bottom: 20rpx;
   text-transform: uppercase;
-  letter-spacing: 2rpx;
+  letter-spacing: 3rpx;
+  font-weight: 600;
+  background: rgba(52, 211, 153, 0.1);
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  line-height: 1.8;
 }
 
 .card-text {
@@ -713,16 +821,24 @@
 .nav-btn {
   width: 160rpx;
   height: 80rpx;
-  background: var(--bg-color);
+  background: var(--card-bg);
   color: var(--text-primary);
   border-radius: 40rpx;
   font-size: 26rpx;
   font-weight: 500;
-  border: none;
+  border: 1rpx solid var(--border-color);
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+/* 深色模式：nav-btn */
+@media (prefers-color-scheme: dark) {
+  .nav-btn {
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
+  }
 }
 
 .nav-btn::after {
@@ -732,6 +848,12 @@
 .nav-btn[disabled] {
   background: var(--bg-color);
   color: var(--text-tertiary);
+  border-color: transparent;
+}
+
+.nav-btn.next {
+  border-color: rgba(52, 211, 153, 0.3);
+  color: var(--primary-dark);
 }
 
 .card-index {
@@ -743,7 +865,7 @@
 .card-index .current {
   font-size: 48rpx;
   font-weight: 700;
-  color: var(--primary-color);
+  color: #059669;
 }
 
 .card-index .separator {
