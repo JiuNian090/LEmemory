@@ -50,6 +50,7 @@ docs/
 .vim/
 .emacs.desktop
 .desktop
+.reasonix/
 
 # -----------------------------------------
 # 系统文件
