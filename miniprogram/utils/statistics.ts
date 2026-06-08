@@ -1,26 +1,32 @@
-const cloud = require('wx-server-sdk')
-cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
-const db = cloud.database()
-const _ = db.command
+/**
+ * 本地统计计算工具
+ * 替代原来的 statistics_get 云函数，从本地存储读取数据计算统计结果
+ */
+import { getLocalStorageData } from './db'
+import type { StudyRecord, CardGroup, Card, StatisticsResult, PeriodType } from './types'
 
 const DAY_MS = 86400000
 const DEFAULT_DAILY_GOAL = 30
-const MAX_RECORDS = 1000
+const STORAGE_KEYS = {
+  CARD_GROUPS: 'card_groups',
+  CARDS: 'cards',
+  STUDY_RECORDS: 'study_records'
+}
 
-function toDateStr(d) {
+function toDateStr(d: Date): string {
   const y = d.getFullYear()
   const m = (d.getMonth() + 1).toString().padStart(2, '0')
   const day = d.getDate().toString().padStart(2, '0')
   return `${y}-${m}-${day}`
 }
 
-function parseDateStr(s) {
+function parseDateStr(s: string): Date {
   const parts = s.split('-').map(Number)
   return new Date(parts[0], parts[1] - 1, parts[2])
 }
 
-function enumerateMonths(start, end) {
-  const months = []
+function enumerateMonths(start: Date, end: Date): string[] {
+  const months: string[] = []
   const cur = new Date(start.getFullYear(), start.getMonth(), 1)
   const endMonth = new Date(end.getFullYear(), end.getMonth(), 1)
   while (cur.getTime() <= endMonth.getTime()) {
@@ -31,7 +37,7 @@ function enumerateMonths(start, end) {
   return months
 }
 
-function calculateChange(current, previous) {
+function calculateChange(current: number, previous: number): { percent: number; text: string; direction: 'up' | 'down' | 'flat' } {
   if (previous === 0 && current === 0) return { percent: 0, text: '—', direction: 'flat' }
   if (previous === 0) return { percent: 100, text: '↑ 100%', direction: 'up' }
   const diff = ((current - previous) / previous) * 100
@@ -44,7 +50,7 @@ function calculateChange(current, previous) {
   }
 }
 
-function calculateStreak(dateSet, today) {
+function calculateStreak(dateSet: Set<string>, today: Date): number {
   let streak = 0
   const cur = new Date(today)
   for (let i = 0; i < 365; i++) {
@@ -60,7 +66,7 @@ function calculateStreak(dateSet, today) {
   return streak
 }
 
-function calculateLongestStreak(dateSet) {
+function calculateLongestStreak(dateSet: Set<string>): number {
   if (dateSet.size === 0) return 0
   const sorted = Array.from(dateSet).sort()
   let longest = 1
@@ -78,7 +84,7 @@ function calculateLongestStreak(dateSet) {
   return longest
 }
 
-function getHeatmapLevel(value, maxValue) {
+function getHeatmapLevel(value: number, maxValue: number): 0 | 1 | 2 | 3 | 4 {
   if (value === 0) return 0
   if (maxValue === 0) return 0
   const ratio = value / maxValue
@@ -88,13 +94,21 @@ function getHeatmapLevel(value, maxValue) {
   return 4
 }
 
-function buildResult(records, prevRecords, groups, cards, start, end, periodType, dailyGoalMinutes) {
-  // 基础聚合
+function buildResult(
+  records: StudyRecord[],
+  prevRecords: StudyRecord[],
+  groups: CardGroup[],
+  cards: Card[],
+  start: Date,
+  end: Date,
+  periodType: string,
+  dailyGoalMinutes: number
+): StatisticsResult {
   let totalDuration = 0
-  const dailyMap = new Map()
-  const monthMap = new Map()
-  const groupMap = new Map()
-  const dateSet = new Set()
+  const dailyMap = new Map<string, number>()
+  const monthMap = new Map<string, number>()
+  const groupMap = new Map<string, number>()
+  const dateSet = new Set<string>()
 
   records.forEach(r => {
     const dur = r.studyDuration || 0
@@ -111,20 +125,19 @@ function buildResult(records, prevRecords, groups, cards, start, end, periodType
     }
   })
 
-  // 上期时长
   let prevDuration = 0
   prevRecords.forEach(r => { prevDuration += r.studyDuration || 0 })
 
   const change = calculateChange(totalDuration, prevDuration)
 
-  // 趋势数据
-  const allDays = []
+  const allDays: string[] = []
   const cur = new Date(start)
   const endDate = new Date(end)
   while (cur.getTime() <= endDate.getTime()) {
     allDays.push(toDateStr(cur))
     cur.setDate(cur.getDate() + 1)
   }
+
   const trendData = allDays.map(d => {
     const date = parseDateStr(d)
     return {
@@ -134,14 +147,12 @@ function buildResult(records, prevRecords, groups, cards, start, end, periodType
     }
   })
 
-  // 月度数据
   const months = enumerateMonths(start, end)
   const monthlyData = months.map(m => ({
     month: m,
     duration: monthMap.get(m) || 0
   }))
 
-  // 热力图：取 start 所在年
   const year = start.getFullYear()
   const heatmapData = []
   const yearStart = new Date(year, 0, 1)
@@ -159,9 +170,9 @@ function buildResult(records, prevRecords, groups, cards, start, end, periodType
     cur2.setDate(cur2.getDate() + 1)
   }
 
-  // 卡牌组饼图
-  const groupTitleMap = {}
+  const groupTitleMap: Record<string, string> = {}
   groups.forEach(g => { groupTitleMap[g.groupId] = g.title })
+
   const groupPieData = Array.from(groupMap.entries())
     .map(([groupId, value]) => ({
       groupId,
@@ -176,11 +187,9 @@ function buildResult(records, prevRecords, groups, cards, start, end, periodType
     groupPieData.forEach(s => { s.percentage = (s.value / totalDuration) * 100 })
   }
 
-  // 连续打卡
   const currentStreak = calculateStreak(dateSet, new Date())
   const longestStreak = calculateLongestStreak(dateSet)
 
-  // 目标达成
   const goalSeconds = dailyGoalMinutes * 60
   let achievedDays = 0
   dateSet.forEach(d => {
@@ -210,76 +219,44 @@ function buildResult(records, prevRecords, groups, cards, start, end, periodType
     groupPieData,
     startDate: toDateStr(start),
     endDate: toDateStr(end),
-    periodType
+    periodType: periodType as PeriodType
   }
 }
 
-exports.main = async (event, context) => {
-  const wxContext = cloud.getWXContext()
-  const OPENID = wxContext.OPENID
+/**
+ * 从本地存储计算统计结果
+ */
+export function computeStatistics(
+  startDate: string,
+  endDate: string,
+  periodType: string = 'custom',
+  dailyGoalMinutes: number = DEFAULT_DAILY_GOAL
+): StatisticsResult {
+  const start = parseDateStr(startDate)
+  const end = parseDateStr(endDate)
+  end.setHours(23, 59, 59, 999)
+  start.setHours(0, 0, 0, 0)
 
-  try {
-    const {
-      startDate,
-      endDate,
-      periodType = 'custom',
-      dailyGoalMinutes = DEFAULT_DAILY_GOAL
-    } = event
+  const lengthMs = end.getTime() - start.getTime()
+  const prevEnd = new Date(start.getTime() - 1)
+  prevEnd.setHours(23, 59, 59, 999)
+  const prevStart = new Date(start.getTime() - lengthMs)
+  prevStart.setHours(0, 0, 0, 0)
 
-    if (!startDate || !endDate) {
-      return { success: false, error: 'startDate 和 endDate 必填' }
-    }
+  const allRecords = getLocalStorageData(STORAGE_KEYS.STUDY_RECORDS) as StudyRecord[]
 
-    const start = parseDateStr(startDate)
-    const end = parseDateStr(endDate)
-    end.setHours(23, 59, 59, 999)
-    start.setHours(0, 0, 0, 0)
+  const records = allRecords.filter(r => {
+    const d = r.studyDate instanceof Date ? r.studyDate : new Date(r.studyDate)
+    return d.getTime() >= start.getTime() && d.getTime() <= end.getTime()
+  })
 
-    // 上期范围
-    const lengthMs = end.getTime() - start.getTime()
-    const prevEnd = new Date(start.getTime() - 1)
-    prevEnd.setHours(23, 59, 59, 999)
-    const prevStart = new Date(start.getTime() - lengthMs)
-    prevStart.setHours(0, 0, 0, 0)
+  const prevRecords = allRecords.filter(r => {
+    const d = r.studyDate instanceof Date ? r.studyDate : new Date(r.studyDate)
+    return d.getTime() >= prevStart.getTime() && d.getTime() <= prevEnd.getTime()
+  })
 
-    // 查询范围内记录
-    const { data: records } = await db.collection('studyRecords')
-      .where({
-        _openid: OPENID,
-        studyDate: _.and(_.gte(start), _.lte(end))
-      })
-      .limit(MAX_RECORDS)
-      .get()
+  const groups = getLocalStorageData(STORAGE_KEYS.CARD_GROUPS) as CardGroup[]
+  const cards = getLocalStorageData(STORAGE_KEYS.CARDS) as Card[]
 
-    // 查询上期记录
-    const { data: prevRecords } = await db.collection('studyRecords')
-      .where({
-        _openid: OPENID,
-        studyDate: _.and(_.gte(prevStart), _.lte(prevEnd))
-      })
-      .limit(MAX_RECORDS)
-      .get()
-
-    // 查询卡牌组与卡牌
-    const [groupsRes, cardsRes] = await Promise.all([
-      db.collection('cardGroups').where({ _openid: OPENID }).get(),
-      db.collection('cards').where({ _openid: OPENID }).get()
-    ])
-
-    const result = buildResult(
-      records,
-      prevRecords,
-      groupsRes.data,
-      cardsRes.data,
-      start,
-      end,
-      periodType,
-      dailyGoalMinutes
-    )
-
-    return { success: true, data: result }
-  } catch (err) {
-    console.error('[statistics_get]', err)
-    return { success: false, error: err.message || err }
-  }
+  return buildResult(records, prevRecords, groups, cards, start, end, periodType, dailyGoalMinutes)
 }

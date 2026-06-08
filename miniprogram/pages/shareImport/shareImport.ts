@@ -54,43 +54,11 @@ Page<ShareImportPageData, WechatMiniprogram.IAnyObject>({
       return
     }
 
-    this.setData({ loading: true, loadError: '' })
-
-    try {
-      const { result } = await wx.cloud.callFunction({
-        name: 'cardGroup_operate',
-        data: { action: 'getSharedGroup', groupId: gid }
-      })
-
-      const res = result as any
-      if (!res || !res.success || !res.data) {
-        throw new Error('获取卡牌组失败')
-      }
-
-      const groupData = res.data.group
-      const cardsData = (res.data.cards || []) as SharedCard[]
-
-      if (!groupData) {
-        throw new Error('卡牌组不存在或已删除')
-      }
-
-      this.setData({
-        loading: false,
-        group: {
-          groupId: groupData.groupId,
-          title: groupData.title || '未命名卡牌组',
-          description: groupData.description || '',
-          cardCount: cardsData.length
-        },
-        cards: cardsData
-      })
-    } catch (err: any) {
-      console.error('[ShareImport] 加载分享卡牌组失败', err)
-      this.setData({
-        loading: false,
-        loadError: err.errMsg || err.message || '加载失败，请重试'
-      })
-    }
+    // 云端分享功能已暂停，数据仅保存在本地
+    this.setData({
+      loading: false,
+      loadError: '云端分享功能暂不可用，请使用备份导入功能'
+    })
   },
 
   async importGroup() {

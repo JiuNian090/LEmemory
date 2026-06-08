@@ -9,6 +9,7 @@ import {
   drawMonthlyBarChart,
   drawPieChart
 } from '../../utils/charts'
+import { computeStatistics } from '../../utils/statistics'
 import type { PeriodType, StatisticsResult, PieSlice } from '../../utils/types'
 
 interface StatisticsPageData {
@@ -92,29 +93,20 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
   // 当前统计数据缓存
   currentResult: null as StatisticsResult | null,
 
-  async loadStatistics() {
+  loadStatistics() {
     const { startDate, endDate, dailyGoalMinutes, activeQuickBtn } = this.data
     if (!startDate || !endDate) return
 
     try {
-      wx.showLoading({ title: '加载中...' })
+      wx.showLoading({ title: '计算中...' })
 
-      const res = await wx.cloud.callFunction({
-        name: 'statistics_get',
-        data: {
-          startDate,
-          endDate,
-          periodType: activeQuickBtn || 'custom',
-          dailyGoalMinutes
-        }
-      })
+      const data = computeStatistics(
+        startDate,
+        endDate,
+        activeQuickBtn || 'custom',
+        dailyGoalMinutes
+      )
 
-      const result = (res as any).result
-      if (!result || !result.success) {
-        throw new Error(result?.error || '云函数返回失败')
-      }
-
-      const data = result.data as StatisticsResult
       this.currentResult = data
 
       // 注入饼图颜色
@@ -143,8 +135,8 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
       // 等下一帧绘制
       wx.nextTick(() => this.drawAllCharts())
     } catch (err) {
-      console.error('[StatisticsPage] 加载失败', err)
-      wx.showToast({ title: '加载失败', icon: 'none' })
+      console.error('[StatisticsPage] 计算失败', err)
+      wx.showToast({ title: '计算失败', icon: 'none' })
     } finally {
       wx.hideLoading()
     }
