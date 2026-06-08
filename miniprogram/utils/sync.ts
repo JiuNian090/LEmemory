@@ -393,6 +393,40 @@ class SyncManager {
   }
 
   /**
+   * 获取云端存储用量
+   */
+  async getCloudStorageInfo(): Promise<{
+    success: boolean
+    totalSize: number
+    backupCount: number
+  }> {
+    try {
+      const userId = await getUserId()
+      if (userId === 'local_user') {
+        return { success: false, totalSize: 0, backupCount: 0 }
+      }
+
+      const { result } = await wx.cloud.callFunction({
+        name: 'backup_manager',
+        data: { action: 'getCloudStorageInfo', userId }
+      })
+
+      const res = result as any
+      if (res && res.success && res.data) {
+        return {
+          success: true,
+          totalSize: res.data.totalSize || 0,
+          backupCount: res.data.backupCount || 0
+        }
+      }
+      return { success: false, totalSize: 0, backupCount: 0 }
+    } catch (err) {
+      console.error('[Sync] 获取云端存储信息失败', err)
+      return { success: false, totalSize: 0, backupCount: 0 }
+    }
+  }
+
+  /**
    * 格式化备份时间 → "MM-DD HH:mm"
    */
   formatBackupTime(isoString: string): string {

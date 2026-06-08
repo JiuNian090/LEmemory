@@ -35,30 +35,24 @@
     </view>
   </view>
 
-  <!-- 存储空间卡片 -->
+  <!-- 存储用量卡片 -->
   <view class="section">
     <view class="section-header">
       <view class="section-header-left">
         <view class="section-icon storage-icon">
-          <text class="icon-text">💾</text>
+          <text class="icon-text">☁️</text>
         </view>
-        <text class="section-title">存储空间</text>
+        <text class="section-title">云端存储用量</text>
       </view>
+      <text class="storage-used-label">{{ formatSize(storageInfo.used) }}</text>
     </view>
-    <view class="section-body">
-      <view class="storage-info">
-        <view class="storage-row">
-          <text class="storage-label">已使用</text>
-          <text class="storage-value">{{ formatSize(storageInfo.used) }}</text>
-        </view>
-        <view class="storage-row">
-          <text class="storage-label">总空间</text>
-          <text class="storage-value">{{ formatSize(storageInfo.limit) }}</text>
-        </view>
-        <view class="progress-bar">
-          <view class="progress-fill" style="width: {{ storageInfo.usedPercent }}%"></view>
-        </view>
-        <text class="progress-text">{{ storageInfo.usedPercent }}%</text>
+    <view class="section-body storage-body">
+      <view class="storage-bar-track">
+        <view class="storage-bar-fill" style="width: {{ storageInfo.usedPercent }}%"></view>
+      </view>
+      <view class="storage-bar-footer">
+        <text class="storage-bar-pct">{{ storageInfo.usedPercent }}%</text>
+        <text class="storage-bar-desc">/ 500 MB 已使用</text>
       </view>
     </view>
   </view>

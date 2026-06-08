@@ -1,5 +1,4 @@
 import { syncManager } from '../../utils/sync'
-import { getStorageInfo } from '../../utils/db'
 import type { BackupRecord } from '../../utils/types'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -22,7 +21,6 @@ interface BackupPageData {
   }
   storageInfo: {
     used: number
-    limit: number
     usedPercent: number
   }
   loading: boolean
@@ -46,7 +44,6 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
     },
     storageInfo: {
       used: 0,
-      limit: 10240,
       usedPercent: 0
     },
     loading: true,
@@ -84,9 +81,11 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
       // 加载备份列表
       const backups = await syncManager.getBackupList()
 
-      // 加载存储信息
-      const storageInfo = getStorageInfo()
-      const usedPercent = Math.min(100, Math.round((storageInfo.used / storageInfo.limit) * 100))
+      // 加载云端存储用量
+      const cloudStorage = await syncManager.getCloudStorageInfo()
+      const CLOUD_TOTAL = 500 * 1024 * 1024 // 500 MB
+      const cloudUsed = cloudStorage.success ? cloudStorage.totalSize : 0
+      const usedPercent = Math.min(100, Math.round((cloudUsed / CLOUD_TOTAL) * 100))
 
       // 加载缓存状态
       const lastCloudCheckTime = wx.getStorageSync('lastCloudCheckTime') || 0
@@ -97,7 +96,7 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
 
       this.setData({
         backups,
-        storageInfo: { ...storageInfo, usedPercent },
+        storageInfo: { used: cloudUsed, usedPercent },
         lastCloudCheckTime,
         cachedCloudStatus,
         lastSyncHash,

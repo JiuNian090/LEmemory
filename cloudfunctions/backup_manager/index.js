@@ -134,6 +134,24 @@ exports.main = async (event, context) => {
         }
       }
 
+    } else if (action === 'getCloudStorageInfo') {
+      // 获取云端存储用量（计算该用户所有备份文档的实际大小）
+      const { data } = await db.collection('backups')
+        .where({ userId })
+        .get()
+
+      let totalSize = 0
+      data.forEach(item => {
+        // 计算完整文档的 JSON 字符串长度作为实际占用大小
+        const docStr = JSON.stringify(item)
+        totalSize += Buffer.byteLength(docStr, 'utf8')
+      })
+
+      return {
+        success: true,
+        data: { totalSize, backupCount: data.length }
+      }
+
     } else if (action === 'delete') {
       const { data } = await db.collection('backups')
         .where({ backupId, userId })
