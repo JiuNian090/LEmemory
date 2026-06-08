@@ -276,29 +276,133 @@ class SyncManager {
     return getStorageInfo()
   }
 
+  // ==================== 备份状态检查（含云端对比+缓存） ====================
+
+  private CACHE_TTL = 300000 // 5 分钟缓存
+
   /**
-   * 获取备份状态信息
+   * 计算本地数据哈希
    */
-  getBackupStatus(): {
-    hasBackup: boolean
-    backupTime: string | null
-    isSynced: boolean
-  } {
-    const lastBackupHash = wx.getStorageSync('lastBackupHash') || ''
-    const lastBackupTime = wx.getStorageSync('lastBackupTime') || ''
+  computeLocalHash(): string {
+    return computeLocalHash()
+  }
 
-    if (!lastBackupHash) {
-      return { hasBackup: false, backupTime: null, isSynced: false }
+  /**
+   * 从云端获取最新备份信息（backupHash, backupTime）
+   */
+  async getLatestBackupInfo(): Promise<{
+    success: boolean
+    hasBackup?: boolean
+    backupTime?: string | null
+    backupHash?: string | null
+    errMsg?: string
+  }> {
+    try {
+      const userId = await getUserId()
+      if (userId === 'local_user') {
+        return { success: false, errMsg: '云开发不可用' }
+      }
+
+      const { result } = await wx.cloud.callFunction({
+        name: 'backup_manager',
+        data: { action: 'getBackupInfo', userId }
+      })
+
+      const res = result as any
+      if (res && res.success) {
+        return {
+          success: true,
+          hasBackup: !!res.hasBackup,
+          backupTime: (res.data?.backupTime as string) || null,
+          backupHash: (res.data?.backupHash as string) || null
+        }
+      }
+      return { success: false, errMsg: (res && res.error) || '获取备份信息失败' }
+    } catch (err) {
+      console.error('[Sync] 获取备份信息失败', err)
+      return { success: false, errMsg: (err as Error).message }
+    }
+  }
+
+  /**
+   * 判断是否需要刷新缓存
+   */
+  shouldRefreshCache(lastCloudCheckTime: number, lastSyncHash: string): boolean {
+    const now = Date.now()
+    // 本地数据是否有变动
+    const localHash = computeLocalHash()
+    if (lastSyncHash && localHash !== lastSyncHash) return true
+    // 缓存过期则刷新
+    if (now - lastCloudCheckTime > this.CACHE_TTL) return true
+    return false
+  }
+
+  /**
+   * 本地哈希短路径：本地无变化且缓存未过期 → 直接使用缓存
+   */
+  tryLocalHashShortCircuit(lastCloudCheckTime: number, lastSyncHash: string, cachedCloudStatus: any): boolean {
+    const localHash = computeLocalHash()
+    if (lastSyncHash && localHash === lastSyncHash) {
+      if (cachedCloudStatus && (Date.now() - lastCloudCheckTime < this.CACHE_TTL)) {
+        return true
+      }
+      return false
+    }
+    return false
+  }
+
+  /**
+   * 根据缓存和本地/云端信息判断备份状态
+   */
+  updateBackupStatusUI(
+    cache: { status: string; time: string | null; hash: string | null },
+    lastSyncHash: string,
+    lastSyncTime: number,
+    lastLocalUpdate: number
+  ): { type: string; label: string } {
+    if (!cache || cache.status === 'no_backup') {
+      return { type: 'unbacked', label: '未备份' }
     }
 
-    const currentHash = computeLocalHash()
-    const isSynced = currentHash === lastBackupHash
+    const localHash = computeLocalHash()
+    const cloudHash = cache.hash || ''
+    const cloudBackupTime = cache.time ? new Date(cache.time).getTime() : 0
 
-    return {
-      hasBackup: true,
-      backupTime: lastBackupTime as string,
-      isSynced
+    // 本地哈希与上次同步哈希一致 → 已同步
+    if (lastSyncHash && localHash === lastSyncHash) {
+      const syncTime = lastSyncTime || cloudBackupTime || lastLocalUpdate
+      const syncTimeStr = syncTime ? this.formatBackupTime(new Date(syncTime).toISOString()) : ''
+      return { type: 'synced', label: '已同步' + (syncTimeStr ? ' ' + syncTimeStr : '') }
     }
+
+    // 本地哈希与云端哈希一致 → 已同步
+    if (cloudHash && localHash === cloudHash && lastSyncHash) {
+      const syncTime = lastSyncTime || cloudBackupTime || lastLocalUpdate
+      const syncTimeStr = syncTime ? this.formatBackupTime(new Date(syncTime).toISOString()) : ''
+      return { type: 'synced', label: '已同步' + (syncTimeStr ? ' ' + syncTimeStr : '') }
+    }
+
+    const localTimeStr = lastLocalUpdate ? this.formatBackupTime(new Date(lastLocalUpdate).toISOString()) : ''
+    const cloudTimeStr = cache.time ? this.formatBackupTime(cache.time) : ''
+
+    if (!cache.time || (cloudBackupTime && lastLocalUpdate > cloudBackupTime)) {
+      return { type: 'local_newer', label: '本地最新' + (localTimeStr ? ' ' + localTimeStr : '') }
+    } else {
+      return { type: 'cloud_newer', label: '云端最新' + (cloudTimeStr ? ' ' + cloudTimeStr : '') }
+    }
+  }
+
+  /**
+   * 格式化备份时间 → "MM-DD HH:mm"
+   */
+  formatBackupTime(isoString: string): string {
+    if (!isoString) return ''
+    const date = new Date(isoString)
+    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const day = date.getDate().toString().padStart(2, '0')
+    const hh = date.getHours().toString().padStart(2, '0')
+    const mm = date.getMinutes().toString().padStart(2, '0')
+    return month + '-' + day + ' ' + hh + ':' + mm
   }
 }
 

@@ -1,11 +1,49 @@
 <view class="container">
-  <!-- 存储信息卡片 -->
+  <!-- 页面标题区 -->
+  <view class="page-header">
+    <view class="header-content">
+      <text class="header-title">☁️ 云备份</text>
+      <text class="header-subtitle">保护你的数据安全</text>
+    </view>
+  </view>
+
+  <!-- 云备份状态卡片 -->
   <view class="section">
     <view class="section-header">
-      <view class="section-icon storage-icon">
-        <text class="icon-text">💾</text>
+      <view class="section-header-left">
+        <view class="section-icon cloud-icon">
+          <text class="icon-text">☁️</text>
+        </view>
+        <text class="section-title">云备份</text>
       </view>
-      <text class="section-title">存储空间</text>
+      <view class="backup-status-badge" catchtap="onStatusTap">
+        <view class="status-breath status-{{backupStatus.type}}"></view>
+        <text class="status-label">{{backupStatus.label}}</text>
+      </view>
+    </view>
+    <view class="section-body">
+      <view class="btn-grid">
+        <view class="grid-btn backup-btn" bindtap="onCreateBackup">
+          <text class="btn-icon">⬆️</text>
+          <text class="btn-text">备份</text>
+        </view>
+        <view class="grid-btn restore-btn" bindtap="onRestoreLatest">
+          <text class="btn-icon">⬇️</text>
+          <text class="btn-text">恢复</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 存储空间卡片 -->
+  <view class="section">
+    <view class="section-header">
+      <view class="section-header-left">
+        <view class="section-icon storage-icon">
+          <text class="icon-text">💾</text>
+        </view>
+        <text class="section-title">存储空间</text>
+      </view>
     </view>
     <view class="section-body">
       <view class="storage-info">
@@ -25,68 +63,38 @@
     </view>
   </view>
 
-  <!-- 云备份状态卡片 -->
+  <!-- 备份历史列表 -->
   <view class="section">
     <view class="section-header">
-      <view class="section-icon cloud-icon">
-        <text class="icon-text">☁️</text>
+      <view class="section-header-left">
+        <view class="section-icon history-icon">
+          <text class="icon-text">📋</text>
+        </view>
+        <text class="section-title">备份历史</text>
       </view>
-      <text class="section-title">云备份</text>
-      <view class="backup-status-badge" wx:if="{{backupStatus.hasBackup}}">
-        <view class="status-dot status-{{backupStatus.statusType}}"></view>
-        <text class="status-label">{{backupStatus.statusLabel}}</text>
-      </view>
-    </view>
-    <view class="section-body">
-      <view wx:if="{{backupStatus.hasBackup && backupStatus.backupTime}}" class="backup-time-row">
-        <text class="backup-time-label">上次备份时间</text>
-        <text class="backup-time-value">{{ formatBackupTime(backupStatus.backupTime) }}</text>
-      </view>
-      <view class="backup-actions">
-        <button class="action-btn action-primary" bindtap="onCreateBackup">
-          ⬆️ 备份到云端
-        </button>
-      </view>
-    </view>
-  </view>
-
-  <!-- 备份列表 -->
-  <view class="section">
-    <view class="section-header">
-      <view class="section-icon backup-icon">
-        <text class="icon-text">📋</text>
-      </view>
-      <text class="section-title">备份历史</text>
     </view>
     <view class="section-body">
       <view wx:if="{{ loading }}" class="loading-tip">
         <text>加载中...</text>
       </view>
-      
+
       <view wx:elif="{{ backups.length === 0 }}" class="empty-tip">
         <text>暂无备份</text>
       </view>
-      
+
       <view wx:else class="backup-list">
-        <view 
-          wx:for="{{ backups }}" 
-          wx:key="backupId" 
-          class="backup-item"
-          data-backup="{{ item }}"
-        >
+        <view wx:for="{{ backups }}" wx:key="backupId" class="backup-item">
           <view class="backup-header">
             <view class="backup-time-row">
               <text class="backup-time">{{ item.backupTime.toLocaleString() }}</text>
               <text class="cloud-badge">☁️ 云端</text>
             </view>
-            <view class="backup-actions">
+            <view class="backup-actions-right">
               <button class="mini-btn restore-btn" bindtap="onRestoreBackup" data-backup="{{ item }}">恢复</button>
               <button class="mini-btn delete-btn" bindtap="deleteBackup" data-backup="{{ item }}">删除</button>
             </view>
           </view>
-          <view wx:if="{{ item.description }}" class="backup-desc">
-            {{ item.description }}
-          </view>
+          <view wx:if="{{ item.description }}" class="backup-desc">{{ item.description }}</view>
           <view class="backup-stats">
             <view class="stat-item">
               <text class="stat-icon">📚</text>
@@ -105,9 +113,7 @@
               <text class="stat-text">{{ item.favoritesCount }} 收藏</text>
             </view>
           </view>
-          <view class="backup-size">
-            <text>大小: {{ formatSize(item.dataSize) }}</text>
-          </view>
+          <view class="backup-size">大小: {{ formatSize(item.dataSize) }}</view>
         </view>
       </view>
     </view>
@@ -117,20 +123,20 @@
   <view wx:if="{{ showDescriptionModal }}" class="modal-mask" bindtap="cancelCreateBackup">
     <view class="modal-container" catchtap="stopPropagation">
       <view class="modal-header">
-        <text class="modal-title">创建备份</text>
+        <view class="modal-title-wrapper">
+          <text class="modal-title-icon">📦</text>
+          <text class="modal-title">创建备份</text>
+        </view>
         <view class="modal-close" bindtap="cancelCreateBackup">
-          <text class="close-icon">×</text>
+          <text class="close-icon">✕</text>
         </view>
       </view>
       <view class="modal-body">
-        <view class="form-group">
-          <text class="form-label">备份描述（可选）</text>
-          <input 
-            class="form-input" 
-            placeholder="输入备份描述..." 
-            value="{{ currentDescription }}"
-            bindinput="onDescriptionInput"
-          />
+        <view class="form-card">
+          <view class="form-group">
+            <text class="form-label">备份描述（可选）</text>
+            <input class="form-input" placeholder="描述一下这个备份..." value="{{ currentDescription }}" bindinput="onDescriptionInput" />
+          </view>
         </view>
       </view>
       <view class="modal-footer">
@@ -144,23 +150,28 @@
   <view wx:if="{{ showRestoreConfirm }}" class="modal-mask" bindtap="cancelRestoreBackup">
     <view class="modal-container" catchtap="stopPropagation">
       <view class="modal-header">
-        <text class="modal-title">确认恢复</text>
+        <view class="modal-title-wrapper">
+          <text class="modal-title-icon">⚠️</text>
+          <text class="modal-title">确认恢复</text>
+        </view>
         <view class="modal-close" bindtap="cancelRestoreBackup">
-          <text class="close-icon">×</text>
+          <text class="close-icon">✕</text>
         </view>
       </view>
       <view class="modal-body">
         <view class="warning-text">
           <text class="warning-icon">⚠️</text>
-          <text class="warning-content">
-            恢复备份将覆盖当前所有数据，此操作不可撤销！确定要恢复吗？
-          </text>
+          <text class="warning-content">恢复备份将覆盖当前所有数据，此操作不可撤销！确定要恢复吗？</text>
         </view>
         <view wx:if="{{ selectedBackup }}" class="backup-preview">
-          <text class="preview-label">备份时间：</text>
-          <text class="preview-value">{{ selectedBackup.backupTime.toLocaleString() }}</text>
-          <text class="preview-label" wx:if="{{ selectedBackup.description }}">备份描述：</text>
-          <text class="preview-value" wx:if="{{ selectedBackup.description }}">{{ selectedBackup.description }}</text>
+          <view class="preview-row">
+            <text class="preview-label">备份时间：</text>
+            <text class="preview-value">{{ selectedBackup.backupTime.toLocaleString() }}</text>
+          </view>
+          <view class="preview-row" wx:if="{{ selectedBackup.description }}">
+            <text class="preview-label">备份描述：</text>
+            <text class="preview-value">{{ selectedBackup.description }}</text>
+          </view>
         </view>
       </view>
       <view class="modal-footer">

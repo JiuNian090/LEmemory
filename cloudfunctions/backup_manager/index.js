@@ -11,7 +11,7 @@ function calculateHash(data) {
       hash = ((hash << 5) - hash) + char
       hash = hash & hash
     }
-    return hash.toString(16)
+    return hash.toString(36)
   }
   return '0'
 }
@@ -35,9 +35,15 @@ exports.main = async (event, context) => {
       }
 
       const latest = data[0]
+      const rawData = latest.backupData || {}
 
-      // 计算备份哈希用于本地对比
-      const combined = JSON.stringify(latest.backupData || {})
+      // 只对数据内容哈希（与前端 computeLocalHash 一致）
+      const cardGroups = rawData.cardGroups || []
+      const cards = rawData.cards || []
+      const studyRecords = rawData.studyRecords || []
+      const favorites = rawData.favorites || []
+      const combined = JSON.stringify(cardGroups) + JSON.stringify(cards)
+        + JSON.stringify(studyRecords) + JSON.stringify(favorites)
       const backupHash = calculateHash(combined)
 
       return {

@@ -2,14 +2,23 @@ import { syncManager } from '../../utils/sync'
 import { getStorageInfo } from '../../utils/db'
 import type { BackupRecord } from '../../utils/types'
 
+const STATUS_LABELS: Record<string, string> = {
+  synced: '已同步',
+  local_newer: '本地最新',
+  cloud_newer: '云端最新',
+  unbacked: '未备份',
+  not_logged_in: '未备份 / 未登录',
+  checking: '检查中...',
+  error: '检查失败'
+}
+
+const CACHE_TTL = 300000 // 5 分钟
+
 interface BackupPageData {
   backups: BackupRecord[]
   backupStatus: {
-    hasBackup: boolean
-    backupTime: string | null
-    isSynced: boolean
-    statusLabel: string
-    statusType: string
+    type: string
+    label: string
   }
   storageInfo: {
     used: number
@@ -21,17 +30,19 @@ interface BackupPageData {
   currentDescription: string
   showRestoreConfirm: boolean
   selectedBackup: BackupRecord | null
+  lastCloudCheckTime: number
+  cachedCloudStatus: any
+  lastSyncHash: string
+  lastSyncTime: number
+  lastLocalUpdate: number
 }
 
 Page<BackupPageData, WechatMiniprogram.IAnyObject>({
   data: {
     backups: [],
     backupStatus: {
-      hasBackup: false,
-      backupTime: null,
-      isSynced: false,
-      statusLabel: '检查中...',
-      statusType: 'checking'
+      type: 'checking',
+      label: STATUS_LABELS.checking
     },
     storageInfo: {
       used: 0,
@@ -42,7 +53,12 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
     showDescriptionModal: false,
     currentDescription: '',
     showRestoreConfirm: false,
-    selectedBackup: null
+    selectedBackup: null,
+    lastCloudCheckTime: 0,
+    cachedCloudStatus: null,
+    lastSyncHash: '',
+    lastSyncTime: 0,
+    lastLocalUpdate: 0
   },
 
   onLoad() {
@@ -59,14 +75,8 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
     })
   },
 
-  /**
-   * 阻止事件冒泡
-   */
   stopPropagation() {},
 
-  /**
-   * 加载数据
-   */
   async loadData() {
     this.setData({ loading: true })
 
@@ -74,131 +84,250 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
       // 加载备份列表
       const backups = await syncManager.getBackupList()
 
-      // 加载备份状态
-      const status = syncManager.getBackupStatus()
-      let statusLabel: string
-      let statusType: string
-
-      if (!status.hasBackup) {
-        statusLabel = '未备份'
-        statusType = 'unbacked'
-      } else if (status.isSynced) {
-        statusLabel = '已同步'
-        statusType = 'synced'
-      } else {
-        statusLabel = '本地最新（需备份）'
-        statusType = 'local_newer'
-      }
-
       // 加载存储信息
       const storageInfo = getStorageInfo()
       const usedPercent = Math.min(100, Math.round((storageInfo.used / storageInfo.limit) * 100))
 
+      // 加载缓存状态
+      const lastCloudCheckTime = wx.getStorageSync('lastCloudCheckTime') || 0
+      const cachedCloudStatus = wx.getStorageSync('cachedCloudStatus') || null
+      const lastSyncHash = wx.getStorageSync('lastSyncHash') || ''
+      const lastSyncTime = wx.getStorageSync('lastSyncTime') || 0
+      const lastLocalUpdate = wx.getStorageSync('lastLocalUpdate') || Date.now()
+
       this.setData({
         backups,
-        backupStatus: {
-          ...status,
-          statusLabel,
-          statusType
-        },
-        storageInfo: {
-          ...storageInfo,
-          usedPercent
-        }
+        storageInfo: { ...storageInfo, usedPercent },
+        lastCloudCheckTime,
+        cachedCloudStatus,
+        lastSyncHash,
+        lastSyncTime,
+        lastLocalUpdate
       })
+
+      // 检查备份状态
+      await this.checkBackupStatus(false)
     } catch (error) {
       console.error('[BackupPage] 加载失败', error)
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      })
+      wx.showToast({ title: '加载失败', icon: 'none' })
     } finally {
       this.setData({ loading: false })
     }
   },
 
   /**
-   * 格式大小
+   * 检查备份状态（核心逻辑）
    */
+  async checkBackupStatus(forceRefresh: boolean) {
+    // 短路：缓存未过期且本地无变化 → 直接用缓存
+    if (!forceRefresh && this.tryLocalHashShortCircuit()) {
+      this.useCachedStatus()
+      return
+    }
+
+    if (forceRefresh) {
+      this.setData({ backupStatus: { type: 'checking', label: STATUS_LABELS.checking } })
+    }
+
+    // 需要刷新 → 从云端获取
+    if (!this.shouldRefreshCache() && !forceRefresh) {
+      this.useCachedStatus()
+      return
+    }
+
+    try {
+      const info = await syncManager.getLatestBackupInfo()
+      if (info.success) {
+        this.handleFetchSuccess(info)
+      } else {
+        if (this.data.cachedCloudStatus) {
+          this.useCachedStatus()
+        } else {
+          this.setData({ backupStatus: { type: 'unbacked', label: STATUS_LABELS.unbacked } })
+        }
+      }
+    } catch (err) {
+      console.error('[BackupPage] 检查备份状态失败', err)
+      if (this.data.cachedCloudStatus) {
+        this.useCachedStatus()
+      } else {
+        this.setData({ backupStatus: { type: 'error', label: STATUS_LABELS.error } })
+      }
+    }
+  },
+
+  /**
+   * 本地哈希短路径
+   */
+  tryLocalHashShortCircuit(): boolean {
+    const localHash = syncManager.computeLocalHash()
+    const { lastSyncHash, cachedCloudStatus, lastCloudCheckTime } = this.data
+    if (lastSyncHash && localHash === lastSyncHash) {
+      if (cachedCloudStatus && (Date.now() - lastCloudCheckTime < CACHE_TTL)) {
+        return true
+      }
+      return false
+    }
+    return false
+  },
+
+  /**
+   * 判断是否需刷新缓存
+   */
+  shouldRefreshCache(): boolean {
+    const { lastCloudCheckTime, lastSyncHash } = this.data
+    const localHash = syncManager.computeLocalHash()
+    if (lastSyncHash && localHash !== lastSyncHash) return true
+    if (Date.now() - lastCloudCheckTime > CACHE_TTL) return true
+    return false
+  },
+
+  /**
+   * 使用缓存状态
+   */
+  useCachedStatus(fallback?: { type: string; label: string }) {
+    const { cachedCloudStatus } = this.data
+    if (cachedCloudStatus) {
+      this.updateStatusUI(cachedCloudStatus)
+    } else if (fallback) {
+      this.setData({ backupStatus: fallback })
+    } else {
+      this.setData({ backupStatus: { type: 'unbacked', label: STATUS_LABELS.unbacked } })
+    }
+  },
+
+  /**
+   * 处理云端返回结果
+   */
+  handleFetchSuccess(info: any) {
+    const now = Date.now()
+    const cloudHash = (typeof info.backupHash === 'string' && info.backupHash.length > 0)
+      ? info.backupHash
+      : (this.data.lastSyncHash || null)
+    const newCache = {
+      status: info.hasBackup ? 'has_backup' : 'no_backup',
+      time: info.backupTime || null,
+      hash: cloudHash
+    }
+
+    this.setData({ lastCloudCheckTime: now, cachedCloudStatus: newCache })
+    wx.setStorageSync('lastCloudCheckTime', now)
+    wx.setStorageSync('cachedCloudStatus', newCache)
+
+    this.updateStatusUI(newCache)
+  },
+
+  /**
+   * 根据缓存判断并显示备份状态
+   */
+  updateStatusUI(cache: any) {
+    if (!cache || cache.status === 'no_backup') {
+      this.setData({ backupStatus: { type: 'unbacked', label: STATUS_LABELS.unbacked } })
+      return
+    }
+
+    const localHash = syncManager.computeLocalHash()
+    const cloudHash = cache.hash || ''
+    const cloudBackupTime = cache.time ? new Date(cache.time).getTime() : 0
+    const { lastSyncHash, lastSyncTime, lastLocalUpdate } = this.data
+
+    // 已同步：本地哈希与上次同步哈希一致
+    if (lastSyncHash && localHash === lastSyncHash) {
+      const syncTime = lastSyncTime || cloudBackupTime || lastLocalUpdate
+      const syncTimeStr = syncTime ? syncManager.formatBackupTime(new Date(syncTime).toISOString()) : ''
+      this.setData({ backupStatus: { type: 'synced', label: '已同步' + (syncTimeStr ? ' ' + syncTimeStr : '') } })
+      return
+    }
+
+    // 已同步：本地哈希与云端哈希一致
+    if (cloudHash && localHash === cloudHash) {
+      const syncTime = lastSyncTime || cloudBackupTime || lastLocalUpdate
+      const syncTimeStr = syncTime ? syncManager.formatBackupTime(new Date(syncTime).toISOString()) : ''
+      this.setData({ backupStatus: { type: 'synced', label: '已同步' + (syncTimeStr ? ' ' + syncTimeStr : '') } })
+      return
+    }
+
+    const localTimeStr = lastLocalUpdate ? syncManager.formatBackupTime(new Date(lastLocalUpdate).toISOString()) : ''
+    const cloudTimeStr = cache.time ? syncManager.formatBackupTime(cache.time) : ''
+
+    if (!cache.time || (cloudBackupTime && lastLocalUpdate > cloudBackupTime)) {
+      this.setData({ backupStatus: { type: 'local_newer', label: '本地最新' + (localTimeStr ? ' ' + localTimeStr : '') } })
+    } else {
+      this.setData({ backupStatus: { type: 'cloud_newer', label: '云端最新' + (cloudTimeStr ? ' ' + cloudTimeStr : '') } })
+    }
+  },
+
+  /**
+   * 点击状态标签手动刷新
+   */
+  onStatusTap() {
+    this.checkBackupStatus(true)
+  },
+
   formatSize(bytes: number): string {
     if (bytes < 1024) return bytes + ' B'
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB'
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
   },
 
-  /**
-   * 格式化备份时间
-   */
-  formatBackupTime(isoString: string): string {
-    if (!isoString) return ''
-    const date = new Date(isoString)
-    const month = (date.getMonth() + 1).toString().padStart(2, '0')
-    const day = date.getDate().toString().padStart(2, '0')
-    const hh = date.getHours().toString().padStart(2, '0')
-    const mm = date.getMinutes().toString().padStart(2, '0')
-    return month + '-' + day + ' ' + hh + ':' + mm
-  },
-
-  /**
-   * 点击创建备份
-   */
   onCreateBackup() {
-    this.setData({
-      showDescriptionModal: true,
-      currentDescription: ''
-    })
+    this.setData({ showDescriptionModal: true, currentDescription: '' })
   },
 
-  /**
-   * 输入备份描述
-   */
   onDescriptionInput(e: WechatMiniprogram.Input) {
     this.setData({ currentDescription: e.detail.value })
   },
 
-  /**
-   * 确认创建备份
-   */
   async confirmCreateBackup() {
     this.setData({ showDescriptionModal: false })
 
     const result = await syncManager.createBackup(this.data.currentDescription)
 
     if (result.success) {
-      wx.showToast({
-        title: result.message,
-        icon: 'success'
+      wx.showToast({ title: result.message, icon: 'success' })
+      // 备份后更新本地同步状态
+      const localHash = syncManager.computeLocalHash()
+      const now = Date.now()
+      wx.setStorageSync('lastSyncHash', localHash)
+      wx.setStorageSync('lastSyncTime', now)
+      wx.setStorageSync('lastBackupHash', localHash)
+      wx.setStorageSync('lastBackupTime', new Date().toISOString())
+      this.setData({
+        lastSyncHash: localHash,
+        lastSyncTime: now,
+        lastLocalUpdate: now,
+        backupStatus: {
+          type: 'synced',
+          label: '已同步 ' + syncManager.formatBackupTime(new Date().toISOString())
+        }
       })
       this.loadData()
     } else {
-      wx.showToast({
-        title: result.message,
-        icon: 'none'
-      })
+      wx.showToast({ title: result.message, icon: 'none' })
     }
   },
 
-  /**
-   * 取消创建备份
-   */
   cancelCreateBackup() {
     this.setData({ showDescriptionModal: false })
   },
 
-  /**
-   * 点击恢复备份
-   */
   onRestoreBackup(e: WechatMiniprogram.TouchEvent) {
     const { backup } = e.currentTarget.dataset
-    this.setData({
-      showRestoreConfirm: true,
-      selectedBackup: backup
-    })
+    this.setData({ showRestoreConfirm: true, selectedBackup: backup })
   },
 
   /**
-   * 确认恢复备份
+   * 恢复最新备份
    */
+  onRestoreLatest() {
+    const backups = this.data.backups
+    if (backups.length === 0) {
+      wx.showToast({ title: '暂无备份', icon: 'none' })
+      return
+    }
+    this.setData({ showRestoreConfirm: true, selectedBackup: backups[0] })
+  },
+
   async confirmRestoreBackup() {
     const backup = this.data.selectedBackup
     if (!backup) return
@@ -208,35 +337,17 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
     const result = await syncManager.restoreFromBackup(backup.backupId)
 
     if (result.success) {
-      wx.showToast({
-        title: result.message,
-        icon: 'success'
-      })
-      // 延迟刷新，让用户看到提示
-      setTimeout(() => {
-        this.loadData()
-      }, 1500)
+      wx.showToast({ title: result.message, icon: 'success' })
+      setTimeout(() => { this.loadData() }, 1500)
     } else {
-      wx.showToast({
-        title: result.message,
-        icon: 'none'
-      })
+      wx.showToast({ title: result.message, icon: 'none' })
     }
   },
 
-  /**
-   * 取消恢复备份
-   */
   cancelRestoreBackup() {
-    this.setData({
-      showRestoreConfirm: false,
-      selectedBackup: null
-    })
+    this.setData({ showRestoreConfirm: false, selectedBackup: null })
   },
 
-  /**
-   * 删除备份
-   */
   async deleteBackup(e: WechatMiniprogram.TouchEvent) {
     const { backup } = e.currentTarget.dataset
 
@@ -246,18 +357,11 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
       success: async (res) => {
         if (res.confirm) {
           const success = await syncManager.deleteBackup(backup.backupId)
-
           if (success) {
-            wx.showToast({
-              title: '删除成功',
-              icon: 'success'
-            })
+            wx.showToast({ title: '删除成功', icon: 'success' })
             this.loadData()
           } else {
-            wx.showToast({
-              title: '删除失败',
-              icon: 'none'
-            })
+            wx.showToast({ title: '删除失败', icon: 'none' })
           }
         }
       }
