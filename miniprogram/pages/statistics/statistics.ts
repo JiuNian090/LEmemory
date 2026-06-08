@@ -13,6 +13,15 @@ import { computeStatistics } from '../../utils/statistics'
 import type { PeriodType, StatisticsResult, PieSlice } from '../../utils/types'
 import { enableShareMenu } from '../../utils/share'
 
+/** 获取设备像素比（带运行时降级） */
+function getDPR(): number {
+  try {
+    return wx.getWindowInfo().pixelRatio
+  } catch {
+    return 2
+  }
+}
+
 interface StatisticsPageData {
   startDate: string
   endDate: string
@@ -162,7 +171,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
         const canvasInfo = res[0]
         if (!canvasInfo || !canvasInfo.node) return
         const canvas = canvasInfo.node as WechatMiniprogram.Canvas
-        const dpr = wx.getWindowInfo().pixelRatio
+        const dpr = getDPR()
         const width = (canvasInfo.width || 0) * dpr
         const height = (canvasInfo.height || 0) * dpr
         if (width === 0 || height === 0) return
@@ -180,7 +189,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
         const canvasInfo = res[0]
         if (!canvasInfo || !canvasInfo.node) return
         const canvas = canvasInfo.node as WechatMiniprogram.Canvas
-        const dpr = wx.getWindowInfo().pixelRatio
+        const dpr = getDPR()
         const width = (canvasInfo.width || 0) * dpr
         const height = (canvasInfo.height || 0) * dpr
         if (width === 0 || height === 0) return
@@ -198,7 +207,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
         const canvasInfo = res[0]
         if (!canvasInfo || !canvasInfo.node) return
         const canvas = canvasInfo.node as WechatMiniprogram.Canvas
-        const dpr = wx.getWindowInfo().pixelRatio
+        const dpr = getDPR()
         const width = (canvasInfo.width || 0) * dpr
         const height = (canvasInfo.height || 0) * dpr
         if (width === 0 || height === 0) return
@@ -214,7 +223,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
         const canvasInfo = res[0]
         if (!canvasInfo || !canvasInfo.node) return
         const canvas = canvasInfo.node as WechatMiniprogram.Canvas
-        const dpr = wx.getWindowInfo().pixelRatio
+        const dpr = getDPR()
         const width = (canvasInfo.width || 0) * dpr
         const height = (canvasInfo.height || 0) * dpr
         if (width === 0 || height === 0) return

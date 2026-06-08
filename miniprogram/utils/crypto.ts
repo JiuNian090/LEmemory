@@ -1,10 +1,8 @@
 /**
  * 简单的加密工具
- * 注意：生产环境建议使用更安全的加密方案
+ * 注意：此加密仅提供基础的混淆保护，不适用于高安全场景
+ * 微信 wx.setStorageSync 本身已提供沙箱隔离存储
  */
-
-// 加密密钥（实际项目中应该从服务端获取）
-const SECRET_KEY = 'lememory_2024_secure_key'
 
 const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/='
 
@@ -59,13 +57,34 @@ function base64Decode(str: string): string {
 }
 
 /**
+ * 运行时派生加密密钥（避免硬编码）
+ * 基于设备信息和运行时种子生成，同一设备上保持稳定
+ */
+function getSecretKey(): string {
+  try {
+    const seed = wx.getStorageSync('__crypto_seed') || ''
+    if (!seed) {
+      const sysInfo = wx.getSystemInfoSync()
+      const newSeed = `le_${sysInfo.SDKVersion}_${sysInfo.brand || ''}_${sysInfo.model || ''}`
+      wx.setStorageSync('__crypto_seed', newSeed)
+      return newSeed
+    }
+    return seed
+  } catch {
+    // 兜底：使用应用标识
+    return 'lememory_default_key'
+  }
+}
+
+/**
  * 简单的字符串混淆加密
  */
 function simpleEncrypt(text: string): string {
   try {
+    const key = getSecretKey()
     let result = ''
     for (let i = 0; i < text.length; i++) {
-      const charCode = text.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length)
+      const charCode = text.charCodeAt(i) ^ key.charCodeAt(i % key.length)
       result += String.fromCharCode(charCode)
     }
     // Base64 编码
@@ -81,12 +100,13 @@ function simpleEncrypt(text: string): string {
  */
 function simpleDecrypt(encrypted: string): string {
   try {
+    const key = getSecretKey()
     // Base64 解码
     const text = base64Decode(encrypted)
     
     let result = ''
     for (let i = 0; i < text.length; i++) {
-      const charCode = text.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length)
+      const charCode = text.charCodeAt(i) ^ key.charCodeAt(i % key.length)
       result += String.fromCharCode(charCode)
     }
     return result
