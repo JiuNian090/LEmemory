@@ -223,13 +223,17 @@ class DualCollection {
 
   async add({ data }: { data: any }): Promise<{ _id: string }> {
     const localResult = await this.getLocal().add({ data })
-    syncEngine.enqueue({
-      id: localResult._id,
-      type: 'add',
-      collection: this.key as any,
-      item: { ...data, _id: localResult._id, updateTime: Date.now() },
-      updateTime: Date.now()
-    })
+    try {
+      syncEngine.enqueue({
+        id: localResult._id,
+        type: 'add',
+        collection: this.key as any,
+        item: { ...data, _id: localResult._id, updateTime: Date.now() },
+        updateTime: Date.now()
+      })
+    } catch (err) {
+      console.warn(`[DB] 同步入队失败（不影响本地保存）:`, err)
+    }
     return localResult
   }
 

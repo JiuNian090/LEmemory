@@ -134,6 +134,8 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
   confirmCreate() {
     const { newTitle, newDesc } = this.data
     
+    console.log('[StudyPage] 确认创建，标题:', `"${newTitle}"`)
+    
     if (!newTitle.trim()) {
       wx.showToast({
         title: '请输入标题',
@@ -152,6 +154,7 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
     try {
       wx.showLoading({ title: '创建中...' })
 
+      console.log('[StudyPage] 正在创建卡牌组:', title)
       await cardGroupCollection.add({
         data: {
           groupId: generateId(),
@@ -162,18 +165,19 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
         }
       })
 
+      // 先关闭 loading，再显示成功提示，避免 UI 冲突
+      wx.hideLoading()
       wx.showToast({
         title: '创建成功',
         icon: 'success'
       })
-      
+
       this.closeDialog()
       this.loadCardGroups()
     } catch (err: any) {
       console.error('[StudyPage] 创建卡牌组失败', err)
-      showErrorToast(err)
-    } finally {
       wx.hideLoading()
+      showErrorToast(err)
     }
   },
 
