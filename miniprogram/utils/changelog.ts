@@ -11,6 +11,18 @@ export interface ChangelogItem {
 
 export const changelogData: ChangelogItem[] = [
   {
+    version: '1.2.1',
+    date: '2026-06-08',
+    changes: [
+      {
+        type: '✨ 优化',
+        items: [
+          '替换废弃的微信小程序API并优化页面细节'
+        ]
+      }
+    ]
+  },
+  {
     version: '1.2.0',
     date: '2026-06-08',
     changes: [
