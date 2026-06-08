@@ -1,14 +1,15 @@
 import { syncManager } from '../../utils/sync'
-import { syncEngine } from '../../utils/syncEngine'
-import { getSyncStatus, getStorageInfo } from '../../utils/db'
+import { getStorageInfo } from '../../utils/db'
 import type { BackupRecord } from '../../utils/types'
 
 interface BackupPageData {
   backups: BackupRecord[]
-  syncStatus: {
-    isSyncing: boolean
-    lastSyncTime?: string
-    pendingItems: number
+  backupStatus: {
+    hasBackup: boolean
+    backupTime: string | null
+    isSynced: boolean
+    statusLabel: string
+    statusType: string
   }
   storageInfo: {
     used: number
@@ -25,9 +26,12 @@ interface BackupPageData {
 Page<BackupPageData, WechatMiniprogram.IAnyObject>({
   data: {
     backups: [],
-    syncStatus: {
-      isSyncing: false,
-      pendingItems: 0
+    backupStatus: {
+      hasBackup: false,
+      backupTime: null,
+      isSynced: false,
+      statusLabel: '检查中...',
+      statusType: 'checking'
     },
     storageInfo: {
       used: 0,
@@ -69,22 +73,33 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
     try {
       // 加载备份列表
       const backups = await syncManager.getBackupList()
-      
-      // 加载同步状态
-      const syncStatus = getSyncStatus()
-      
+
+      // 加载备份状态
+      const status = syncManager.getBackupStatus()
+      let statusLabel: string
+      let statusType: string
+
+      if (!status.hasBackup) {
+        statusLabel = '未备份'
+        statusType = 'unbacked'
+      } else if (status.isSynced) {
+        statusLabel = '已同步'
+        statusType = 'synced'
+      } else {
+        statusLabel = '本地最新（需备份）'
+        statusType = 'local_newer'
+      }
+
       // 加载存储信息
       const storageInfo = getStorageInfo()
       const usedPercent = Math.min(100, Math.round((storageInfo.used / storageInfo.limit) * 100))
 
       this.setData({
         backups,
-        syncStatus: {
-          isSyncing: syncStatus.isSyncing,
-          lastSyncTime: syncStatus.lastSyncTime 
-            ? new Date(syncStatus.lastSyncTime).toLocaleString()
-            : undefined,
-          pendingItems: syncStatus.pendingItems
+        backupStatus: {
+          ...status,
+          statusLabel,
+          statusType
         },
         storageInfo: {
           ...storageInfo,
@@ -112,6 +127,19 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
   },
 
   /**
+   * 格式化备份时间
+   */
+  formatBackupTime(isoString: string): string {
+    if (!isoString) return ''
+    const date = new Date(isoString)
+    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const day = date.getDate().toString().padStart(2, '0')
+    const hh = date.getHours().toString().padStart(2, '0')
+    const mm = date.getMinutes().toString().padStart(2, '0')
+    return month + '-' + day + ' ' + hh + ':' + mm
+  },
+
+  /**
    * 点击创建备份
    */
   onCreateBackup() {
@@ -133,9 +161,9 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
    */
   async confirmCreateBackup() {
     this.setData({ showDescriptionModal: false })
-    
+
     const result = await syncManager.createBackup(this.data.currentDescription)
-    
+
     if (result.success) {
       wx.showToast({
         title: result.message,
@@ -176,9 +204,9 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
     if (!backup) return
 
     this.setData({ showRestoreConfirm: false })
-    
+
     const result = await syncManager.restoreFromBackup(backup.backupId)
-    
+
     if (result.success) {
       wx.showToast({
         title: result.message,
@@ -218,7 +246,7 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
       success: async (res) => {
         if (res.confirm) {
           const success = await syncManager.deleteBackup(backup.backupId)
-          
+
           if (success) {
             wx.showToast({
               title: '删除成功',
@@ -234,21 +262,5 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
         }
       }
     })
-  },
-
-  /**
-   * 手动同步数据
-   */
-  async onManualSync() {
-    wx.showLoading({ title: '同步中...' })
-    try {
-      await syncEngine.flushNow()
-      wx.hideLoading()
-      wx.showToast({ title: '同步完成', icon: 'success' })
-      this.loadData()
-    } catch (err) {
-      wx.hideLoading()
-      wx.showToast({ title: '同步失败', icon: 'none' })
-    }
   }
 })

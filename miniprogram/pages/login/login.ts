@@ -295,13 +295,8 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
           userInfo: userInfo
         })
 
-        // 同步数据
-        wx.showLoading({ title: '同步数据...' })
-        const syncResult = await syncManager.syncFromCloudOnLogin()
-        wx.hideLoading()
-
         wx.showToast({
-          title: syncResult.success ? '登录成功' : '登录成功，但数据同步失败',
+          title: '登录成功',
           icon: 'success',
           duration: 1500
         })

@@ -1,5 +1,3 @@
-import { syncEngine } from './syncEngine'
-import { syncManager } from './sync'
 import type { IAppOption } from './types'
 
 const app = getApp<IAppOption>()
@@ -45,17 +43,6 @@ export async function tryAutoLogin(): Promise<boolean> {
       wx.setStorageSync('savedAccounts', savedAccounts)
 
       console.log('[Auth] 自动登录成功')
-
-      // 从云端同步数据
-      try {
-        wx.showLoading({ title: '同步数据...' })
-        await syncManager.syncFromCloudOnLogin()
-        wx.hideLoading()
-      } catch (syncErr) {
-        wx.hideLoading()
-        console.warn('[Auth] 自动登录后数据同步失败', syncErr)
-      }
-
       return true
     } else {
       // 凭据失效，清除
@@ -70,8 +57,6 @@ export async function tryAutoLogin(): Promise<boolean> {
     const cachedUser = wx.getStorageSync('userInfo')
     if (cachedUser) {
       app.globalData.userInfo = cachedUser
-      // 启动同步引擎（可能之前有未同步的变更）
-      syncEngine.start()
       return true
     }
     return false

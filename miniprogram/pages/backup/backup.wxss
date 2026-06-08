@@ -36,8 +36,8 @@ page {
   background: linear-gradient(135deg, #60a5fa, #3b82f6);
 }
 
-.sync-icon {
-  background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+.cloud-icon {
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
 }
 
 .backup-icon {
@@ -104,40 +104,64 @@ page {
   margin-top: 8rpx;
 }
 
-/* 同步状态 */
-.sync-status {
+/* 云备份状态 */
+.backup-status-badge {
   display: flex;
-  flex-direction: column;
-  gap: 16rpx;
+  align-items: center;
+  gap: 8rpx;
+  background: var(--bg-color);
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  margin-left: auto;
 }
 
-.sync-row {
+.status-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+}
+
+.status-dot.status-synced {
+  background: var(--primary-color);
+  box-shadow: 0 0 8rpx var(--primary-color);
+}
+
+.status-dot.status-local_newer {
+  background: #f59e0b;
+  box-shadow: 0 0 8rpx rgba(245, 158, 11, 0.5);
+}
+
+.status-dot.status-unbacked {
+  background: var(--text-tertiary);
+}
+
+.status-label {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+}
+
+.backup-time-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 20rpx;
 }
 
-.sync-label {
-  font-size: 28rpx;
+.backup-time-label {
+  font-size: 26rpx;
+  color: var(--text-tertiary);
+}
+
+.backup-time-value {
+  font-size: 26rpx;
   color: var(--text-secondary);
-}
-
-.sync-value {
-  font-size: 28rpx;
-  color: var(--text-primary);
   font-weight: 500;
 }
 
-.sync-value.syncing {
-  color: var(--primary-color);
-}
-
-.sync-value.idle {
-  color: var(--text-secondary);
-}
-
-.sync-value.warning {
-  color: var(--warning-color);
+.backup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
 }
 
 /* 操作按钮 */
@@ -158,15 +182,14 @@ page {
   gap: 10rpx;
 }
 
-.action-btn.primary {
+.action-btn.action-primary {
   background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
   color: white;
 }
 
-.action-btn.sync-btn {
+.action-btn.action-secondary {
   background: var(--bg-color);
   color: var(--text-primary);
-  margin-top: 16rpx;
 }
 
 .action-btn[disabled] {

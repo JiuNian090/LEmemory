@@ -3,13 +3,57 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+function calculateHash(data) {
+  if (typeof data === 'string') {
+    let hash = 0
+    for (let i = 0; i < data.length; i++) {
+      const char = data.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash
+    }
+    return hash.toString(16)
+  }
+  return '0'
+}
+
 exports.main = async (event, context) => {
   const { action, backupId, description, backupData, dataSize, cardGroupsCount, cardsCount, studyRecordsCount, favoritesCount } = event
   const wxContext = cloud.getWXContext()
   const userId = wxContext.OPENID
 
   try {
-    if (action === 'list') {
+    if (action === 'getBackupInfo') {
+      // 获取最新备份的信息（用于状态对比）
+      const { data } = await db.collection('backups')
+        .where({ userId })
+        .orderBy('backupTime', 'desc')
+        .limit(1)
+        .get()
+
+      if (data.length === 0) {
+        return { success: true, hasBackup: false }
+      }
+
+      const latest = data[0]
+
+      // 计算备份哈希用于本地对比
+      const combined = JSON.stringify(latest.backupData || {})
+      const backupHash = calculateHash(combined)
+
+      return {
+        success: true,
+        hasBackup: true,
+        data: {
+          backupTime: latest.backupTime,
+          backupHash,
+          cardGroupsCount: latest.cardGroupsCount || 0,
+          cardsCount: latest.cardsCount || 0,
+          studyRecordsCount: latest.studyRecordsCount || 0,
+          favoritesCount: latest.favoritesCount || 0
+        }
+      }
+
+    } else if (action === 'list') {
       const { data } = await db.collection('backups')
         .where({ userId })
         .orderBy('backupTime', 'desc')
@@ -29,7 +73,18 @@ exports.main = async (event, context) => {
           favoritesCount: item.favoritesCount
         }))
       }
+
     } else if (action === 'create') {
+      // 全量覆盖备份：先删除旧备份再创建新备份，每个用户只保留一份
+      const { data: existing } = await db.collection('backups')
+        .where({ userId })
+        .limit(1)
+        .get()
+
+      if (existing.length > 0) {
+        await db.collection('backups').doc(existing[0]._id).remove()
+      }
+
       const result = await db.collection('backups').add({
         data: {
           backupId,
@@ -46,11 +101,8 @@ exports.main = async (event, context) => {
         }
       })
 
-      return {
-        success: true,
-        _id: result._id,
-        backupId
-      }
+      return { success: true, _id: result._id, backupId }
+
     } else if (action === 'get') {
       const { data } = await db.collection('backups')
         .where({ backupId, userId })
@@ -75,6 +127,7 @@ exports.main = async (event, context) => {
           backupData: data[0].backupData
         }
       }
+
     } else if (action === 'delete') {
       const { data } = await db.collection('backups')
         .where({ backupId, userId })
@@ -86,83 +139,6 @@ exports.main = async (event, context) => {
       }
 
       return { success: true }
-    } else if (action === 'sync') {
-      // 增量同步：处理变更队列
-      const changes = event.changes || []
-      let processed = 0
-      let skipped = 0
-      const conflicts = []
-
-      for (const change of changes) {
-        const { type, collection: collName, item, updateTime } = change
-
-        try {
-          if (type === 'remove') {
-            const businessKeys = {
-              cardGroups: 'groupId',
-              cards: 'cardId',
-              studyRecords: 'recordId',
-              favorites: 'favoriteId'
-            }
-            const key = businessKeys[collName] || '_id'
-            const keyValue = item[key] || item._id
-            const { data: existing } = await db.collection(collName)
-              .where({ [key]: keyValue })
-              .limit(1)
-              .get()
-            if (existing.length > 0) {
-              await db.collection(collName).doc(existing[0]._id).remove()
-              processed++
-            } else {
-              skipped++
-            }
-          } else if (type === 'add' || type === 'update') {
-            const businessKeys = {
-              cardGroups: 'groupId',
-              cards: 'cardId',
-              studyRecords: 'recordId',
-              favorites: 'favoriteId'
-            }
-            const key = businessKeys[collName] || '_id'
-            const keyValue = item[key] || item._id
-            const { data: existing } = await db.collection(collName)
-              .where({ [key]: keyValue })
-              .limit(1)
-              .get()
-
-            if (existing.length > 0) {
-              const cloudItem = existing[0]
-              if (cloudItem.updateTime && cloudItem.updateTime > updateTime) {
-                skipped++
-                conflicts.push({
-                  id: keyValue,
-                  cloudUpdateTime: cloudItem.updateTime,
-                  localUpdateTime: updateTime
-                })
-                continue
-              }
-              await db.collection(collName).doc(cloudItem._id).set({
-                data: { ...item, userId, updateTime }
-              })
-            } else {
-              await db.collection(collName).add({
-                data: { ...item, userId, updateTime }
-              })
-            }
-            processed++
-          }
-        } catch (err) {
-          console.error(`[BackupManager] sync 处理单条变更失败: ${collName} ${change.id}`, err)
-          skipped++
-        }
-      }
-
-      return {
-        success: true,
-        processed,
-        skipped,
-        conflicts
-      }
     }
 
     return { success: false, error: '未知操作' }

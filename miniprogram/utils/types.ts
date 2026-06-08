@@ -31,7 +31,6 @@ export interface CardGroup {
   description?: string
   createTime: Date
   updateTime: number
-  syncStatus?: 'local' | 'synced' | 'pending'
 }
 
 export interface Card {
@@ -42,7 +41,6 @@ export interface Card {
   back: string
   createTime: Date
   updateTime: number
-  syncStatus?: 'local' | 'synced' | 'pending'
 }
 
 export interface StudyRecord {
@@ -52,7 +50,6 @@ export interface StudyRecord {
   studyDuration: number
   studyDate: Date
   updateTime: number
-  syncStatus?: 'local' | 'synced' | 'pending'
 }
 
 export interface Favorite {
@@ -62,7 +59,6 @@ export interface Favorite {
   groupId: string
   createTime: Date
   updateTime: number
-  syncStatus?: 'local' | 'synced' | 'pending'
 }
 
 // 备份记录
@@ -97,37 +93,11 @@ export interface BackupData {
   favorites: Favorite[]
 }
 
-// 同步状态
-export interface SyncStatus {
-  lastSyncTime?: Date
-  isSyncing: boolean
-  pendingItems: number
-  lastError?: string
-}
-
 export interface IAppOption {
   globalData: {
     userInfo: User | null
   }
   userInfoReadyCallback?: WechatMiniprogram.GetUserProfileSuccessCallbackResult
-}
-
-export type SyncChangeType = 'add' | 'update' | 'remove'
-
-export interface SyncChange {
-  id: string
-  type: SyncChangeType
-  collection: 'cardGroups' | 'cards' | 'studyRecords' | 'favorites'
-  item: any
-  updateTime: number
-  retryCount: number
-}
-
-export interface SyncResult {
-  success: boolean
-  processed: number
-  skipped: number
-  conflicts: Array<{ id: string; cloudUpdateTime: number; localUpdateTime: number }>
 }
 
 // ==================== 统计接口 ====================

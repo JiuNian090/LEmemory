@@ -1,50 +1,24 @@
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
-const _ = db.command
 
+/**
+ * 分享卡牌组相关操作（只保留，用于分享导入）
+ * create/update/delete 等功能已迁移到纯本地操作
+ */
 exports.main = async (event, context) => {
-  const wxContext = cloud.getWXContext()
-  const { action, groupId, title, description } = event
+  const { action, groupId } = event
 
   try {
-    if (action === 'create') {
-      await db.collection('cardGroups').add({
-        data: {
-          groupId,
-          title,
-          description: description || '',
-          createTime: new Date(),
-          updateTime: new Date()
-        }
-      })
-    } else if (action === 'list') {
-      const { data } = await db.collection('cardGroups').where({
-        _openid: wxContext.OPENID
-      }).orderBy('updateTime', 'desc').get()
-      return { data }
-    } else if (action === 'update') {
-      await db.collection('cardGroups').where({
-        groupId
-      }).update({
-        data: {
-          title,
-          description,
-          updateTime: new Date()
-        }
-      })
-    } else if (action === 'delete') {
-      await db.collection('cardGroups').where({ groupId }).remove()
-      await db.collection('cards').where({ groupId }).remove()
-    } else if (action === 'getSharedGroup') {
+    if (action === 'getSharedGroup') {
       const groupResult = await db.collection('cardGroups').where({
         groupId
       }).get()
-      
+
       const cardsResult = await db.collection('cards').where({
         groupId
       }).get()
-      
+
       return {
         success: true,
         data: {
@@ -54,9 +28,9 @@ exports.main = async (event, context) => {
       }
     }
 
-    return { success: true }
+    return { success: false, error: '未知操作' }
   } catch (err) {
     console.error(err)
-    return { success: false, error: err }
+    return { success: false, error: err.message }
   }
 }

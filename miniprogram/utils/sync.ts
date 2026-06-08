@@ -3,16 +3,14 @@ import {
   generateId,
   exportAllLocalData,
   importLocalData,
-  updateSyncStatus,
   getLocalStorageData,
   setLocalStorageData,
   getStorageInfo,
-  downloadCloudToLocal,
-  uploadAllLocalToCloud
+  clearAllLocalData,
+  computeLocalHash
 } from './db'
 import type { BackupData, BackupRecord } from './types'
 import { IAppOption } from './types'
-import { syncEngine } from './syncEngine'
 
 const app = getApp<IAppOption>()
 const BACKUP_STORAGE_KEY = 'backup_records'
@@ -20,79 +18,12 @@ const BACKUP_STORAGE_KEY = 'backup_records'
 class SyncManager {
 
   /**
-   * 登录后从云端全量下载数据，并启动增量同步引擎
-   */
-  async syncFromCloudOnLogin(): Promise<{
-    success: boolean
-    message: string
-    syncedCount: number
-  }> {
-    console.log('[Sync] 开始账号关联和数据同步')
-
-    try {
-      const userId = await getUserId()
-      if (userId === 'local_user') {
-        return { success: false, message: '云开发不可用，请检查网络连接', syncedCount: 0 }
-      }
-
-      updateSyncStatus({ isSyncing: true })
-
-      const syncedCount = await downloadCloudToLocal(userId)
-
-      updateSyncStatus({
-        isSyncing: false,
-        lastSyncTime: new Date(),
-        pendingItems: 0,
-        lastError: undefined
-      })
-
-      // 启动增量同步引擎
-      syncEngine.start()
-
-      return {
-        success: true,
-        message: syncedCount > 0 ? `已从云端恢复 ${syncedCount} 条数据` : '云端暂无数据',
-        syncedCount
-      }
-
-    } catch (error) {
-      console.error('[Sync] 同步失败', error)
-      updateSyncStatus({
-        isSyncing: false,
-        lastError: error instanceof Error ? error.message : '未知错误'
-      })
-      syncEngine.start()
-      return {
-        success: false,
-        message: '同步失败：' + (error instanceof Error ? error.message : '未知错误'),
-        syncedCount: 0
-      }
-    }
-  }
-
-  /**
    * 退出登录：清除所有本地数据
    */
   async onLogout(): Promise<void> {
     console.log('[Sync] 退出登录，清除本地数据')
-    try {
-      await syncEngine.flushNow()
-      const userId = await getUserId()
-      if (userId !== 'local_user') {
-        await uploadAllLocalToCloud(userId)
-        console.log('[Sync] 本地数据已同步至云端')
-      }
-    } catch (err) {
-      console.warn('[Sync] 退出时同步云端失败', err)
-    }
 
-    syncEngine.stop()
-
-    try {
-      wx.clearStorageSync()
-    } catch (err) {
-      console.error('[Sync] 清除本地数据失败', err)
-    }
+    clearAllLocalData()
 
     try {
       const preserved = wx.getStorageSync('saved_accounts_preserve')
@@ -122,15 +53,13 @@ class SyncManager {
 
       wx.showLoading({ title: '备份中...' })
 
-      await syncEngine.flushNow()
-
       const localData = exportAllLocalData()
       const dataJson = JSON.stringify(localData)
       const dataSize = dataJson.length
 
       const backupId = generateId()
 
-      // 1. 上传到云端备份集合
+      // 上传到云端备份集合
       try {
         const { result } = await wx.cloud.callFunction({
           name: 'backup_manager',
@@ -156,7 +85,7 @@ class SyncManager {
         console.warn('[Sync] 云端备份失败，降级本地', err)
       }
 
-      // 2. 本地也存一份副本
+      // 本地也存一份副本
       const backups = getLocalStorageData(BACKUP_STORAGE_KEY)
       backups.push({
         backupId,
@@ -171,6 +100,11 @@ class SyncManager {
         backupData: localData
       })
       setLocalStorageData(BACKUP_STORAGE_KEY, backups.slice(-30))
+
+      // 更新备份时间戳和哈希
+      const localHash = computeLocalHash()
+      wx.setStorageSync('lastBackupHash', localHash)
+      wx.setStorageSync('lastBackupTime', new Date().toISOString())
 
       wx.hideLoading()
 
@@ -238,8 +172,7 @@ class SyncManager {
   }
 
   /**
-   * 从备份节点快速恢复数据
-   * 流程：云端下载备份 → 导入本地 → 同步到云端数据表
+   * 从备份节点恢复数据
    */
   async restoreFromBackup(backupId: string): Promise<{
     success: boolean
@@ -288,17 +221,12 @@ class SyncManager {
       // 3. 导入到本地
       importLocalData(backupData)
 
-      // 4. 同步到云端数据表
-      try {
-        const count = await uploadAllLocalToCloud(userId)
-        console.log(`[Sync] 恢复后同步 ${count} 条数据到云端`)
-      } catch (err) {
-        console.warn('[Sync] 恢复后同步云端失败', err)
-      }
+      // 更新备份时间戳
+      wx.setStorageSync('lastRestoreTime', new Date().toISOString())
 
       wx.hideLoading()
 
-      return { success: true, message: '恢复成功，数据已同步至云端' }
+      return { success: true, message: '恢复成功' }
 
     } catch (error) {
       wx.hideLoading()
@@ -346,6 +274,31 @@ class SyncManager {
    */
   getStorageUsage() {
     return getStorageInfo()
+  }
+
+  /**
+   * 获取备份状态信息
+   */
+  getBackupStatus(): {
+    hasBackup: boolean
+    backupTime: string | null
+    isSynced: boolean
+  } {
+    const lastBackupHash = wx.getStorageSync('lastBackupHash') || ''
+    const lastBackupTime = wx.getStorageSync('lastBackupTime') || ''
+
+    if (!lastBackupHash) {
+      return { hasBackup: false, backupTime: null, isSynced: false }
+    }
+
+    const currentHash = computeLocalHash()
+    const isSynced = currentHash === lastBackupHash
+
+    return {
+      hasBackup: true,
+      backupTime: lastBackupTime as string,
+      isSynced
+    }
   }
 }
 
