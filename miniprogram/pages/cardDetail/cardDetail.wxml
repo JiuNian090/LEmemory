@@ -109,6 +109,11 @@
           </view>
         </view>
 
+        <view class="share-link-btn" bindtap="copyShareLink">
+          <text class="share-link-icon">🔗</text>
+          <text class="share-link-text">分享链接（复制）</text>
+        </view>
+
         <view class="delete-group-btn" bindtap="deleteCardGroup">
           <text class="delete-icon">🗑️</text>
           <text class="delete-text">删除卡牌组</text>

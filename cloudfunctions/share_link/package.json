@@ -1,0 +1,9 @@
+{
+  "name": "share_link",
+  "version": "1.0.0",
+  "description": "生成 URL Link 分享链接",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

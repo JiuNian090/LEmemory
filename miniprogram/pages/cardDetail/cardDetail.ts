@@ -1124,6 +1124,27 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     }
   },
 
+  async copyShareLink() {
+    wx.showLoading({ title: '生成分享链接...' })
+    try {
+      const res: any = await wx.cloud.callFunction({
+        name: 'share_link',
+        data: {}
+      })
+      if (!res.result.success) {
+        throw new Error(res.result.error || '生成失败')
+      }
+      const { urlLink } = res.result
+      await wx.setClipboardData({ data: urlLink })
+      wx.showToast({ title: '链接已复制，可在浏览器中打开', icon: 'none' })
+    } catch (err) {
+      console.error('[CardDetail] 生成分享链接失败', err)
+      wx.showToast({ title: '生成链接失败，请稍后重试', icon: 'none' })
+    } finally {
+      wx.hideLoading()
+    }
+  },
+
   importCards() {
     wx.chooseMessageFile({
       count: 1,
