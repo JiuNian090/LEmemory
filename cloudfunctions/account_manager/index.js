@@ -18,7 +18,7 @@ function verifyPassword(password, hash, salt) {
 }
 
 exports.main = async (event, context) => {
-  const { action, username, password, nickName, avatarUrl, rememberPassword, oldPassword, newPassword } = event
+  const { action, username, password, nickName, avatarUrl, avatarHash, rememberPassword, oldPassword, newPassword } = event
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
 
@@ -46,6 +46,7 @@ exports.main = async (event, context) => {
           passwordSalt: salt,
           nickName: nickName || username,
           avatarUrl: avatarUrl || '',
+          avatarHash: avatarHash || '',
           passwordVersion: 1,
           createTime: new Date(),
           lastLoginTime: new Date()
@@ -93,6 +94,7 @@ exports.main = async (event, context) => {
           username: user.username,
           nickName: user.nickName,
           avatarUrl: user.avatarUrl,
+          avatarHash: user.avatarHash || '',
           passwordVersion: user.passwordVersion || 1,
           createTime: user.createTime,
           lastLoginTime: new Date()
@@ -130,6 +132,7 @@ exports.main = async (event, context) => {
           username: user.username,
           nickName: user.nickName,
           avatarUrl: user.avatarUrl,
+          avatarHash: user.avatarHash || '',
           passwordVersion: user.passwordVersion || 1,
           createTime: user.createTime,
           lastLoginTime: user.lastLoginTime
@@ -148,6 +151,7 @@ exports.main = async (event, context) => {
       const updateData = {}
       if (nickName !== undefined) updateData.nickName = nickName
       if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl
+      if (avatarHash !== undefined) updateData.avatarHash = avatarHash
 
       if (Object.keys(updateData).length === 0) {
         return { success: false, error: '没有需要更新的内容' }
@@ -162,6 +166,7 @@ exports.main = async (event, context) => {
           username: user.username,
           nickName: nickName !== undefined ? nickName : user.nickName,
           avatarUrl: avatarUrl !== undefined ? avatarUrl : user.avatarUrl,
+          avatarHash: avatarHash !== undefined ? avatarHash : (user.avatarHash || ''),
           passwordVersion: user.passwordVersion || 1,
           createTime: user.createTime,
           lastLoginTime: user.lastLoginTime

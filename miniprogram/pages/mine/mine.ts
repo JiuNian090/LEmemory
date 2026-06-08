@@ -1,16 +1,20 @@
 import { IAppOption } from '../../utils/types'
 import { syncManager } from '../../utils/sync'
 import { enableShareMenu } from '../../utils/share'
+import { syncUserProfile, getBestAvatarUrl } from '../../utils/userSync'
 
 const app = getApp<IAppOption>()
 
 interface MinePageData {
   userInfo: any
+  /** 当前最佳头像显示路径 */
+  avatarDisplayUrl: string
 }
 
 Page<MinePageData, WechatMiniprogram.IAnyObject>({
   data: {
-    userInfo: null
+    userInfo: null,
+    avatarDisplayUrl: '/images/me.png'
   },
 
   onLoad() {
@@ -20,21 +24,25 @@ Page<MinePageData, WechatMiniprogram.IAnyObject>({
 
   onShow() {
     this.loadUserInfo()
+    // 页面显示时从云端同步用户资料（头像、昵称等多端同步）
+    syncUserProfile().then((changed) => {
+      if (changed) {
+        this.loadUserInfo()
+      }
+    })
   },
 
   /**
-   * 加载用户信息
+   * 加载用户信息并计算最佳头像路径
    */
   loadUserInfo() {
     try {
       const cachedUser = wx.getStorageSync('userInfo')
-      if (cachedUser) {
+      const userInfo = cachedUser || app.globalData.userInfo || null
+      if (userInfo) {
         this.setData({
-          userInfo: cachedUser
-        })
-      } else if (app.globalData.userInfo) {
-        this.setData({
-          userInfo: app.globalData.userInfo
+          userInfo,
+          avatarDisplayUrl: getBestAvatarUrl(userInfo)
         })
       }
     } catch (err) {

@@ -1,5 +1,6 @@
 import { IAppOption } from '../../utils/types'
 import { syncManager } from '../../utils/sync'
+import { cacheLocalAvatar, getBestAvatarUrl, computeFileHashFromPath } from '../../utils/userSync'
 
 const app = getApp<IAppOption>()
 
@@ -7,6 +8,8 @@ interface SettingsPageData {
   userInfo: any
   nickName: string
   avatarUrl: string
+  /** 当前最佳头像显示路径 */
+  avatarDisplayUrl: string
   showNickNameModal: boolean
   showPasswordModal: boolean
   showSwitchSheet: boolean
@@ -25,6 +28,7 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
     userInfo: null,
     nickName: '',
     avatarUrl: '',
+    avatarDisplayUrl: '/images/me.png',
     showNickNameModal: false,
     showPasswordModal: false,
     showSwitchSheet: false,
@@ -54,14 +58,16 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
         this.setData({
           userInfo: cachedUser,
           nickName: cachedUser.nickName || cachedUser.username || '',
-          avatarUrl: cachedUser.avatarUrl || ''
+          avatarUrl: cachedUser.avatarUrl || '',
+          avatarDisplayUrl: getBestAvatarUrl(cachedUser)
         })
       } else if (app.globalData.userInfo) {
         const userInfo = app.globalData.userInfo
         this.setData({
           userInfo,
           nickName: userInfo.nickName || userInfo.username || '',
-          avatarUrl: userInfo.avatarUrl || ''
+          avatarUrl: userInfo.avatarUrl || '',
+          avatarDisplayUrl: getBestAvatarUrl(userInfo)
         })
       }
     } catch (err) {
@@ -94,6 +100,14 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
   async updateAvatar(filePath: string) {
     this.setData({ loading: true })
 
+    // 1. 计算头像文件的哈希（用于多端同步对比）
+    let fileHash = ''
+    try {
+      fileHash = await computeFileHashFromPath(filePath)
+    } catch (err) {
+      console.warn('[Settings] 计算头像哈希失败，不影响上传', err)
+    }
+
     let cloudSuccess = false
     let avatarUrl = ''
     try {
@@ -105,17 +119,24 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
 
       avatarUrl = uploadResult.fileID
 
+      // 2. 更新云端用户资料（带上 hash，供其他设备哈希对比）
       const { result } = await wx.cloud.callFunction({
         name: 'account_manager',
         data: {
           action: 'updateProfile',
-          avatarUrl
+          avatarUrl,
+          avatarHash: fileHash
         }
       })
 
       const updateResult = result as { success: boolean; error?: string; user?: any }
       if (updateResult.success && updateResult.user) {
         const serverUser = updateResult.user
+        // 3. 将新头像缓存到本地（记录哈希）
+        const localPath = cacheLocalAvatar(filePath, avatarUrl, fileHash)
+        if (localPath) {
+          serverUser.avatarLocalPath = localPath
+        }
         app.globalData.userInfo = serverUser
         wx.setStorageSync('userInfo', serverUser)
         this.setData({
@@ -132,9 +153,12 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
     }
 
     if (!cloudSuccess && avatarUrl) {
+      // 虽然云端失败但文件已上传，缓存到本地
+      const localPath = cacheLocalAvatar(filePath, avatarUrl, fileHash)
       const localUser = {
         ...this.data.userInfo,
-        avatarUrl
+        avatarUrl,
+        avatarLocalPath: localPath || undefined
       }
       app.globalData.userInfo = localUser
       wx.setStorageSync('userInfo', localUser)

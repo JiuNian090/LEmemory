@@ -14,7 +14,7 @@
             <text class="menu-text">头像</text>
           </view>
           <view class="item-right">
-            <image class="avatar-small" src="{{avatarUrl || '/images/me.png'}}" mode="aspectFill" />
+            <image class="avatar-small" src="{{avatarDisplayUrl}}" mode="aspectFill" />
             <text class="item-arrow">›</text>
           </view>
         </view>

@@ -2,6 +2,8 @@ export interface User {
   _openid: string
   nickName?: string
   avatarUrl?: string
+  /** 本地缓存的头像文件路径（wx.env.USER_DATA_PATH 下） */
+  avatarLocalPath?: string
   createTime: Date
   lastSyncTime?: Date
   username?: string

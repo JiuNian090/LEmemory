@@ -1,5 +1,6 @@
 import { IAppOption } from './utils/types'
 import { tryAutoLogin } from './utils/auth'
+import { syncUserProfile } from './utils/userSync'
 
 App<IAppOption>({
   globalData: {
@@ -22,7 +23,11 @@ App<IAppOption>({
       console.log('[App] 当前版本不支持云开发，将使用本地存储模式')
     }
 
-    // 尝试自动登录
-    tryAutoLogin()
+    // 尝试自动登录，登录成功后同步云端用户资料
+    tryAutoLogin().then((loggedIn) => {
+      if (loggedIn) {
+        syncUserProfile()
+      }
+    })
   },
 })

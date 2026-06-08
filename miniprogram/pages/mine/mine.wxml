@@ -3,7 +3,7 @@
     <view class="section-body" bindtap="handleHeaderClick">
       <view class="user-wrapper">
         <view class="avatar-wrapper">
-          <image class="avatar" src="{{userInfo ? (userInfo.avatarUrl || '/images/me.png') : '/images/me.png'}}" mode="aspectFill" />
+          <image class="avatar" src="{{userInfo ? avatarDisplayUrl : '/images/me.png'}}" mode="aspectFill" />
         </view>
         <view class="user-info">
           <view class="nickname">{{userInfo ? (userInfo.nickName || userInfo.username) : '点击登录'}}</view>
