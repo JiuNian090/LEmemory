@@ -1,4 +1,4 @@
-import { cardGroupCollection, cardCollection, favoriteCollection, generateId, deleteCardGroup } from '../../utils/db'
+import { cardGroupCollection, cardCollection, favoriteCollection, generateId, deleteCardGroup, addDailyStudyDuration, getDailyStudyMap } from '../../utils/db'
 import { showErrorToast } from '../../utils/error'
 import type { IAppOption } from '../../utils/types'
 import { enableShareMenu } from '../../utils/share'
@@ -354,6 +354,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   },
 
   async loadTodayStudyTime() {
+    const today = new Date().toISOString().split('T')[0]
     const username = app.globalData.userInfo?.username
     if (!username) return
 
@@ -368,14 +369,23 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       })
       const res = result as { success: boolean; total: number }
       if (res.success) {
+        // 云端总时长（包含其他设备同步的数据）
+        const total = Math.max(res.total, this.data.todayStats.studiedTime)
         this.setData({
-          'todayStats.studiedTime': res.total,
-          formattedStudiedTime: this.formatTime(res.total)
+          'todayStats.studiedTime': total,
+          formattedStudiedTime: this.formatTime(total)
         })
-        console.log('[CardDetail] 今日学习时长', res.total, '秒')
+        console.log('[CardDetail] 今日学习时长', total, '秒')
       }
     } catch (err) {
-      console.error('[CardDetail] 加载今日学习时长失败', err)
+      console.error('[CardDetail] 加载今日学习时长失败，使用本地数据', err)
+      // 离线回退：从本地 daily 数据读取
+      const local = getDailyStudyMap()[today]
+      const total = local?.groups[this.data.groupId] || 0
+      this.setData({
+        'todayStats.studiedTime': total,
+        formattedStudiedTime: this.formatTime(total)
+      })
     }
   },
 
@@ -456,7 +466,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       })
     }, 1000)
 
-    // 每30秒自动保存增量
+    // 每15秒自动保存增量
     this.saveInterval = setInterval(() => {
       const now2 = Date.now()
       const delta = Math.floor((now2 - this.lastSaveTime) / 1000)
@@ -465,7 +475,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
         this.lastSaveTime = now2
         this.saveStudyRecord(delta)
       }
-    }, 30000)
+    }, 15000)
   },
 
   /** 清除所有计时器 */
@@ -510,51 +520,66 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   /**
    * 停止学习计时并保存
    */
-  stopStudyTimer() {
+  async stopStudyTimer() {
     this.clearStudyIntervals()
-    // 保存最后一段增量（与自动保存的 delta 语义一致）
+    // 保存最后一段增量，同步到云端
     const delta = Math.floor((Date.now() - this.lastSaveTime) / 1000)
     if (delta >= 5) {
-      this.saveStudyRecord(delta)
+      await this.saveStudyRecord(delta, true)
     }
     this.sessionSeconds = 0
     this.lastSaveTime = 0
   },
 
   /**
-   * 保存学习记录（云端同步）
+   * 保存学习时长（本地运算 + 可选云端同步）
+   * @param duration 本次学习秒数
+   * @param syncToCloud 是否同步到云端（仅退出学习时同步）
    */
-  async saveStudyRecord(duration: number) {
+  async saveStudyRecord(duration: number, syncToCloud: boolean = false) {
     if (duration < 5) {
       console.log('[CardDetail] 学习时长太短，不保存')
       return
     }
 
-    const username = app.globalData.userInfo?.username
-    if (!username) {
-      console.warn('[CardDetail] 未登录，跳过云端保存')
-      return
-    }
+    // 1. 本地运算：写入每日学习时长
+    const today = new Date().toISOString().split('T')[0]
+    addDailyStudyDuration(today, this.data.groupId, duration)
 
-    try {
-      const { result } = await wx.cloud.callFunction({
-        name: 'study_sync',
-        data: {
-          action: 'save',
-          username,
-          groupId: this.data.groupId,
-          duration,
-          studyDate: new Date().toISOString()
-        }
-      })
-      const res = result as { success: boolean }
-      if (res.success) {
-        console.log('[CardDetail] 保存学习记录成功', duration, '秒')
-      } else {
-        console.error('[CardDetail] 保存学习记录失败', res)
+    // 2. 更新界面显示
+    const newTotal = this.data.todayStats.studiedTime + duration
+    this.setData({
+      'todayStats.studiedTime': newTotal,
+      formattedStudiedTime: this.formatTime(newTotal)
+    })
+
+    // 3. 同步到云端（仅在退出学习时）
+    if (syncToCloud) {
+      const username = app.globalData.userInfo?.username
+      if (!username) {
+        console.warn('[CardDetail] 未登录，跳过云端同步')
+        return
       }
-    } catch (err) {
-      console.error('[CardDetail] 保存学习记录失败', err)
+      try {
+        const { result } = await wx.cloud.callFunction({
+          name: 'study_sync',
+          data: {
+            action: 'syncDaily',
+            username,
+            date: today,
+            groupId: this.data.groupId,
+            duration
+          }
+        })
+        const res = result as { success: boolean }
+        if (res.success) {
+          console.log('[CardDetail] 云端同步成功', duration, '秒')
+        } else {
+          console.warn('[CardDetail] 云端同步失败', res)
+        }
+      } catch (err) {
+        console.error('[CardDetail] 云端同步失败', err)
+      }
     }
   },
 

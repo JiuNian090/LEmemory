@@ -1,5 +1,5 @@
 // 统计相关的纯函数工具
-import type { PeriodType } from './types'
+import type { PeriodType, StudyRecord } from './types'
 
 const DAY_MS = 86400000
 
@@ -190,4 +190,29 @@ export function buildDailyDurationMap(records: Array<{ studyDuration: number; st
     map.set(key, (map.get(key) || 0) + (r.studyDuration || 0))
   })
   return map
+}
+
+/** 云端 study_daily 原始数据项 */
+interface CloudDailyItem {
+  _id: string
+  username: string
+  date: string        // "2026-06-09"
+  groupId: string
+  totalDuration: number
+  updateTime?: Date
+}
+
+/**
+ * 将云端每日聚合数据转换为 StudyRecord[]（用于 computeStatistics）
+ * 每天每组一条记录
+ */
+export function dailyDataToRecords(dailyData: CloudDailyItem[], username: string): StudyRecord[] {
+  return dailyData.map(d => ({
+    recordId: d._id || '',
+    userId: username,
+    groupId: d.groupId,
+    studyDuration: d.totalDuration,
+    studyDate: new Date(d.date + 'T00:00:00'),
+    updateTime: d.updateTime?.getTime() || 0
+  }))
 }

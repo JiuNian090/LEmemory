@@ -35,9 +35,11 @@ export function computeLocalHash(): string {
   const cards = getLocalStorageData('cards') || []
   const studyRecords = getLocalStorageData('study_records') || []
   const favorites = getLocalStorageData('favorites') || []
+  const studyDaily = getDailyStudyMap()
 
   const combined = JSON.stringify(cardGroups) + JSON.stringify(cards)
     + JSON.stringify(studyRecords) + JSON.stringify(favorites)
+    + JSON.stringify(studyDaily)
 
   let hash = 0
   for (let i = 0; i < combined.length; i++) {
@@ -46,6 +48,47 @@ export function computeLocalHash(): string {
     hash = hash & hash
   }
   return hash.toString(36)
+}
+
+// ==================== 每日学习时长（按日聚合，本地优先） ====================
+
+export interface DailyStudyEntry {
+  totalDuration: number
+  groups: Record<string, number>
+}
+
+export type DailyStudyMap = Record<string, DailyStudyEntry>
+
+const DAILY_STUDY_KEY = 'study_daily'
+
+export function getDailyStudyMap(): DailyStudyMap {
+  try {
+    return getEncryptedStorage(DAILY_STUDY_KEY) || {}
+  } catch (err) {
+    console.error('[DB] 读取每日学习时长失败', err)
+    return {}
+  }
+}
+
+export function setDailyStudyMap(data: DailyStudyMap): boolean {
+  try {
+    return setEncryptedStorage(DAILY_STUDY_KEY, data)
+  } catch (err) {
+    console.error('[DB] 保存每日学习时长失败', err)
+    return false
+  }
+}
+
+/** 增加某日某卡牌组的学习时长（秒），返回更新后的 daily map */
+export function addDailyStudyDuration(date: string, groupId: string, duration: number): DailyStudyMap {
+  const data = getDailyStudyMap()
+  if (!data[date]) {
+    data[date] = { totalDuration: 0, groups: {} }
+  }
+  data[date].totalDuration += duration
+  data[date].groups[groupId] = (data[date].groups[groupId] || 0) + duration
+  setDailyStudyMap(data)
+  return data
 }
 
 // ==================== 本地集合类 ====================
@@ -202,6 +245,25 @@ export async function deleteCardGroup(groupId: string): Promise<void> {
     }
   }
 
+  // 同时清理每日学习时长中该卡牌组的数据
+  try {
+    const daily = getDailyStudyMap()
+    for (const dateKey of Object.keys(daily)) {
+      if (daily[dateKey].groups[groupId] !== undefined) {
+        daily[dateKey].totalDuration -= daily[dateKey].groups[groupId]
+        delete daily[dateKey].groups[groupId]
+        if (daily[dateKey].totalDuration <= 0) {
+          delete daily[dateKey]
+        }
+      }
+    }
+    setDailyStudyMap(daily)
+  } catch (err) {
+    const msg = '清理每日学习时长失败'
+    console.error(`[DB] ${msg}`, err)
+    errors.push(msg)
+  }
+
   if (errors.length > 0) {
     throw new Error(`删除卡牌组部分失败: ${errors.join('; ')}`)
   }
@@ -234,6 +296,7 @@ export function exportAllLocalData(): BackupData {
   const cards = getLocalStorageData(STORAGE_KEYS.CARDS) as Card[]
   const studyRecords = getLocalStorageData(STORAGE_KEYS.STUDY_RECORDS) as StudyRecord[]
   const favorites = getLocalStorageData(STORAGE_KEYS.FAVORITES) as Favorite[]
+  const studyDailyData = getDailyStudyMap()
 
   // 收集用户独立设置
   const settings: Record<string, any> = {}
@@ -261,6 +324,7 @@ export function exportAllLocalData(): BackupData {
     cards,
     studyRecords,
     favorites,
+    studyDaily: studyDailyData,
     settings: Object.keys(settings).length > 0 ? settings : undefined
   }
 }
@@ -273,6 +337,11 @@ export function importLocalData(data: BackupData): boolean {
     setLocalStorageData(STORAGE_KEYS.CARDS, data.cards)
     setLocalStorageData(STORAGE_KEYS.STUDY_RECORDS, data.studyRecords)
     setLocalStorageData(STORAGE_KEYS.FAVORITES, data.favorites)
+
+    // 恢复每日学习时长（studyDaily）
+    if (data.studyDaily) {
+      setDailyStudyMap(data.studyDaily)
+    }
 
     // 恢复用户设置
     if (data.settings) {

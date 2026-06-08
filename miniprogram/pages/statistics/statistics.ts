@@ -1,7 +1,8 @@
 import { formatDuration } from '../../utils/time'
 import { getThemeColors, onThemeChange } from '../../utils/theme-colors'
 import {
-  getPeriodRange
+  getPeriodRange,
+  dailyDataToRecords
 } from '../../utils/statistics-helpers'
 import {
   drawLineChart,
@@ -340,7 +341,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
   },
 
   /**
-   * 从云端拉取学习记录
+   * 从云端拉取每日学习数据（study_daily 聚合格式）
    */
   async fetchCloudRecords(startDate: string, endDate: string): Promise<StudyRecord[] | undefined> {
     const username = app.globalData.userInfo?.username
@@ -350,16 +351,16 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
       const { result } = await wx.cloud.callFunction({
         name: 'study_sync',
         data: {
-          action: 'getRecords',
+          action: 'getDailyData',
           username,
           startDate,
           endDate
         }
       })
-      const res = result as { success: boolean; data: StudyRecord[] }
+      const res = result as { success: boolean; data: any[] }
       if (res.success) {
-        console.log('[StatisticsPage] 拉取云端记录', res.data.length, '条')
-        return res.data
+        console.log('[StatisticsPage] 拉取云端每日数据', res.data.length, '条')
+        return dailyDataToRecords(res.data, username)
       }
       console.warn('[StatisticsPage] 云端拉取失败，使用本地数据', res)
     } catch (err) {

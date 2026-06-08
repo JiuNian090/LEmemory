@@ -95,6 +95,7 @@ export interface BackupData {
   cards: Card[]
   studyRecords: StudyRecord[]
   favorites: Favorite[]
+  studyDaily?: Record<string, { totalDuration: number; groups: Record<string, number> }>
   settings?: Record<string, any>
 }
 
