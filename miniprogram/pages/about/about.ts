@@ -11,7 +11,7 @@ interface AboutPageData {
 Page<AboutPageData, WechatMiniprogram.IAnyObject>({
   data: {
     appName: 'LEmemory',
-    appVersion: '1.2.4',
+    appVersion: '1.2.5',
     appDesc: '智能记忆卡片，高效学习助手',
     changelog: changelogData
   },

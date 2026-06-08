@@ -11,6 +11,31 @@ export interface ChangelogItem {
 
 export const changelogData: ChangelogItem[] = [
   {
+    version: '1.2.5',
+    date: '2026-06-09',
+    changes: [
+      {
+        type: '🏗️ 重构',
+        items: [
+          '重构学习数据同步逻辑，改用每日聚合存储，提升同步效率'
+        ]
+      },
+      {
+        type: '✨ 优化',
+        items: [
+          '缩短学习页面自动保存间隔，减少数据丢失风险'
+        ]
+      },
+      {
+        type: '⚡ 调整',
+        items: [
+          '适配卡牌组删除时自动清理每日学习数据',
+          '适配数据导入导出时包含每日学习时长数据'
+        ]
+      }
+    ]
+  },
+  {
     version: '1.2.4',
     date: '2026-06-09',
     changes: [
