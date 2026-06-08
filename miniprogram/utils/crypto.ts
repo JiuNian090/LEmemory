@@ -147,14 +147,39 @@ export function getEncryptedStorage(key: string): any {
     if (!encrypted) {
       return null
     }
-    
-    // 尝试解密
+
+    // 尝试用当前密钥解密
     try {
       const decrypted = simpleDecrypt(encrypted)
       return JSON.parse(decrypted)
     } catch {
-      // 可能是明文存储的数据，直接返回
-      return encrypted
+      // 当前密钥解密失败 → 尝试用旧硬编码密钥兼容（数据迁移）
+      try {
+        const oldKey = 'lememory_2024_secure_key'
+        const text = base64Decode(encrypted)
+        let result = ''
+        for (let i = 0; i < text.length; i++) {
+          const charCode = text.charCodeAt(i) ^ oldKey.charCodeAt(i % oldKey.length)
+          result += String.fromCharCode(charCode)
+        }
+        const parsed = JSON.parse(result)
+
+        // 迁移成功 → 用新密钥重新加密保存
+        try {
+          setEncryptedStorage(key, parsed)
+        } catch { /* 静默处理 */ }
+
+        return parsed
+      } catch {
+        // 可能是明文存储的数据（JSON 字符串）
+        try {
+          return JSON.parse(encrypted)
+        } catch {
+          // 完全未知格式，安全降级
+          console.warn('[Crypto] 无法解析存储数据，key:', key)
+          return null
+        }
+      }
     }
   } catch (error) {
     console.error('[Crypto] 读取解密数据失败', error)
