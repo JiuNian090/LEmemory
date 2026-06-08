@@ -226,11 +226,25 @@ const STORAGE_KEYS = {
   STUDY_RECORDS: 'study_records'
 }
 
+/** 用户设置项（通过 wx.setStorageSync 存储的独立设置） */
+const USER_SETTING_KEYS = ['dailyGoalMinutes']
+
 export function exportAllLocalData(): BackupData {
   const cardGroups = getLocalStorageData(STORAGE_KEYS.CARD_GROUPS) as CardGroup[]
   const cards = getLocalStorageData(STORAGE_KEYS.CARDS) as Card[]
   const studyRecords = getLocalStorageData(STORAGE_KEYS.STUDY_RECORDS) as StudyRecord[]
   const favorites = getLocalStorageData(STORAGE_KEYS.FAVORITES) as Favorite[]
+
+  // 收集用户独立设置
+  const settings: Record<string, any> = {}
+  for (const key of USER_SETTING_KEYS) {
+    try {
+      const val = wx.getStorageSync(key)
+      if (val !== '' && val != null) {
+        settings[key] = val
+      }
+    } catch (_) { /* 忽略读取失败的 key */ }
+  }
 
   return {
     version: '1.0',
@@ -246,7 +260,8 @@ export function exportAllLocalData(): BackupData {
     cardGroups,
     cards,
     studyRecords,
-    favorites
+    favorites,
+    settings: Object.keys(settings).length > 0 ? settings : undefined
   }
 }
 
@@ -258,6 +273,14 @@ export function importLocalData(data: BackupData): boolean {
     setLocalStorageData(STORAGE_KEYS.CARDS, data.cards)
     setLocalStorageData(STORAGE_KEYS.STUDY_RECORDS, data.studyRecords)
     setLocalStorageData(STORAGE_KEYS.FAVORITES, data.favorites)
+
+    // 恢复用户设置
+    if (data.settings) {
+      for (const [key, val] of Object.entries(data.settings)) {
+        try { wx.setStorageSync(key, val) } catch (_) { /* 忽略 */ }
+      }
+    }
+
     console.log('[DB] 数据导入成功')
     return true
   } catch (error) {

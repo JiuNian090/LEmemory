@@ -29,7 +29,8 @@ exports.main = async (event, context) => {
     }
 
     return {
-      success: true
+      success: true,
+      openid: wxContext.OPENID
     }
   } catch (err) {
     console.error(err)

@@ -78,8 +78,12 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
     this.setData({ loading: true })
 
     try {
-      // 加载备份列表
-      const backups = await syncManager.getBackupList()
+      // 加载备份列表，并格式化日期
+      const rawBackups = await syncManager.getBackupList()
+      const backups = rawBackups.map(b => ({
+        ...b,
+        backupTimeDisplay: syncManager.formatBackupTime(b.backupTime instanceof Date ? b.backupTime.toISOString() : String(b.backupTime))
+      }))
 
       // 加载云端存储用量
       const cloudStorage = await syncManager.getCloudStorageInfo()

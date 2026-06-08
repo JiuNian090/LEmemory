@@ -80,7 +80,7 @@
         <view wx:for="{{ backups }}" wx:key="backupId" class="backup-item">
           <view class="backup-header">
             <view class="backup-time-row">
-              <text class="backup-time">{{ item.backupTime.toLocaleString() }}</text>
+              <text class="backup-time">{{ item.backupTimeDisplay }}</text>
               <text class="cloud-badge">☁️ 云端</text>
             </view>
             <view class="backup-actions-right">
@@ -160,7 +160,7 @@
         <view wx:if="{{ selectedBackup }}" class="backup-preview">
           <view class="preview-row">
             <text class="preview-label">备份时间：</text>
-            <text class="preview-value">{{ selectedBackup.backupTime.toLocaleString() }}</text>
+            <text class="preview-value">{{ selectedBackup.backupTimeDisplay }}</text>
           </view>
           <view class="preview-row" wx:if="{{ selectedBackup.description }}">
             <text class="preview-label">备份描述：</text>

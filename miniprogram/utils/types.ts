@@ -91,6 +91,7 @@ export interface BackupData {
   cards: Card[]
   studyRecords: StudyRecord[]
   favorites: Favorite[]
+  settings?: Record<string, any>
 }
 
 export interface IAppOption {
