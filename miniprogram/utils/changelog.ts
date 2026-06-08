@@ -11,6 +11,19 @@ export interface ChangelogItem {
 
 export const changelogData: ChangelogItem[] = [
   {
+    version: '1.2.4',
+    date: '2026-06-09',
+    changes: [
+      {
+        type: '🎉 新增',
+        items: [
+          '学习记录云端同步功能',
+          '实时学习计时器'
+        ]
+      }
+    ]
+  },
+  {
     version: '1.2.3',
     date: '2026-06-09',
     changes: [
