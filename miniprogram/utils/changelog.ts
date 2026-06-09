@@ -11,6 +11,31 @@ export interface ChangelogItem {
 
 export const changelogData: ChangelogItem[] = [
   {
+    version: '1.3.1',
+    date: '2026-06-09',
+    changes: [
+      {
+        type: '🎉 新增',
+        items: [
+          '热力图新增第5个等级，更精细展示学习活跃度'
+        ]
+      },
+      {
+        type: '🏗️ 重构',
+        items: [
+          '重构目标设置逻辑与统计指标计算',
+          '重构备份同步逻辑，替换备份弹窗为确认弹窗'
+        ]
+      },
+      {
+        type: '🔧 修复',
+        items: [
+          '修复滑动页跳转详情页闪现问题'
+        ]
+      }
+    ]
+  },
+  {
     version: '1.3.0',
     date: '2026-06-09',
     changes: [
