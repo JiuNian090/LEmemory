@@ -125,7 +125,7 @@ export interface MonthlyPoint {
 export interface HeatmapPoint {
   date: string
   value: number
-  level: 0 | 1 | 2 | 3 | 4
+  level: 0 | 1 | 2 | 3 | 4 | 5
 }
 
 export interface PieSlice {

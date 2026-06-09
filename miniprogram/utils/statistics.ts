@@ -84,14 +84,15 @@ function calculateLongestStreak(dateSet: Set<string>): number {
   return longest
 }
 
-function getHeatmapLevel(value: number, maxValue: number): 0 | 1 | 2 | 3 | 4 {
+function getHeatmapLevel(value: number, dailyGoalSeconds: number): 0 | 1 | 2 | 3 | 4 | 5 {
   if (value === 0) return 0
-  if (maxValue === 0) return 0
-  const ratio = value / maxValue
+  if (dailyGoalSeconds <= 0) return 0
+  const ratio = value / dailyGoalSeconds
   if (ratio < 0.25) return 1
   if (ratio < 0.5) return 2
   if (ratio < 0.75) return 3
-  return 4
+  if (ratio < 1) return 4
+  return 5
 }
 
 function buildResult(
@@ -158,14 +159,13 @@ function buildResult(
   const yearStart = new Date(year, 0, 1)
   const yearEnd = new Date(year, 11, 31)
   const cur2 = new Date(yearStart)
-  const maxDaily = Math.max(...Array.from(dailyMap.values()), 1)
   while (cur2.getTime() <= yearEnd.getTime()) {
     const dStr = toDateStr(cur2)
     const value = dailyMap.get(dStr) || 0
     heatmapData.push({
       date: dStr,
       value,
-      level: getHeatmapLevel(value, maxDaily)
+      level: getHeatmapLevel(value, dailyGoalMinutes * 60)
     })
     cur2.setDate(cur2.getDate() + 1)
   }

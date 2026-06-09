@@ -172,11 +172,12 @@ export function drawHeatmap(
 
   const dataMap = new Map(data.map(d => [d.date, d]))
 
-  const colorForLevel = (level: 0 | 1 | 2 | 3 | 4): string => {
+  const colorForLevel = (level: 0 | 1 | 2 | 3 | 4 | 5): string => {
     if (level === 0) return theme.grid
     if (level === 1) return theme.primaryAlpha10
     if (level === 2) return theme.primaryAlpha30
     if (level === 3) return theme.primaryAlpha50
+    if (level === 4) return theme.primaryAlpha70
     return theme.primary
   }
 

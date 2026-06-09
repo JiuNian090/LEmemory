@@ -108,10 +108,11 @@
         <view class="heatmap-legend">
           <text class="legend-text">少</text>
           <view class="legend-cell" style="background: var(--primary-color); opacity: 0.1;"></view>
-          <view class="legend-cell" style="background: var(--primary-color); opacity: 0.3;"></view>
-          <view class="legend-cell" style="background: var(--primary-color); opacity: 0.5;"></view>
-          <view class="legend-cell" style="background: var(--primary-color); opacity: 0.7;"></view>
-          <view class="legend-cell" style="background: var(--primary-color); opacity: 1;"></view>
+          <view class="legend-cell" style="background: var(--primary-color); opacity: 0.25;"></view>
+          <view class="legend-cell" style="background: var(--primary-color); opacity: 0.4;"></view>
+          <view class="legend-cell" style="background: var(--primary-color); opacity: 0.55;"></view>
+          <view class="legend-cell" style="background: var(--primary-color); opacity: 0.75;"></view>
+          <view class="legend-cell" style="background: var(--primary-color);"></view>
           <text class="legend-text">多</text>
         </view>
       </view>
