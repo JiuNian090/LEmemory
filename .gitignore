@@ -51,6 +51,7 @@ docs/
 .emacs.desktop
 .desktop
 .reasonix/
+reasonix.toml
 
 # -----------------------------------------
 # 系统文件

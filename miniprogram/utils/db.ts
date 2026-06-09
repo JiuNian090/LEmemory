@@ -338,26 +338,45 @@ export function exportAllLocalData(): BackupData {
 
 export function importLocalData(data: BackupData): boolean {
   try {
+    // 1. 保存恢复前的快照（用于回滚）
     const currentData = exportAllLocalData()
     setEncryptedStorage('backup_before_import', currentData)
+
+    // 2. 全覆盖恢复：卡牌组、卡牌、收藏（这些是"内容"，应当完全还原）
     setLocalStorageData(STORAGE_KEYS.CARD_GROUPS, data.cardGroups)
     setLocalStorageData(STORAGE_KEYS.CARDS, data.cards)
-    setLocalStorageData(STORAGE_KEYS.STUDY_RECORDS, data.studyRecords)
     setLocalStorageData(STORAGE_KEYS.FAVORITES, data.favorites)
 
-    // 恢复每日学习时长（studyDaily）
+    // 3. 合并恢复学习记录（保留现有记录 + 追加备份中的记录）
+    const existingRecords = getLocalStorageData(STORAGE_KEYS.STUDY_RECORDS) as any[]
+    const existingIds = new Set(existingRecords.map((r: any) => r.recordId))
+    const newRecords = (data.studyRecords || []).filter(r => !existingIds.has(r.recordId))
+    setLocalStorageData(STORAGE_KEYS.STUDY_RECORDS, [...existingRecords, ...newRecords].slice(-5000))
+
+    // 4. 合并恢复每日学习时长（累加，不覆盖）
     if (data.studyDaily) {
-      setDailyStudyMap(data.studyDaily)
+      const localDaily = getDailyStudyMap()
+      for (const [dateStr, entry] of Object.entries(data.studyDaily)) {
+        if (!localDaily[dateStr]) {
+          localDaily[dateStr] = { totalDuration: 0, groups: {} }
+        }
+        localDaily[dateStr].totalDuration += entry.totalDuration
+        for (const [groupId, duration] of Object.entries(entry.groups)) {
+          localDaily[dateStr].groups[groupId] =
+            (localDaily[dateStr].groups[groupId] || 0) + duration
+        }
+      }
+      setDailyStudyMap(localDaily)
     }
 
-    // 恢复用户设置
+    // 5. 恢复用户设置
     if (data.settings) {
       for (const [key, val] of Object.entries(data.settings)) {
         try { wx.setStorageSync(key, val) } catch (_) { /* 忽略 */ }
       }
     }
 
-    console.log('[DB] 数据导入成功')
+    console.log('[DB] 数据导入成功（合并模式）')
     return true
   } catch (error) {
     console.error('[DB] 数据导入失败', error)

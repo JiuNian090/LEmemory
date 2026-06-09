@@ -1,4 +1,4 @@
-import { cardGroupCollection, cardCollection, favoriteCollection, generateId, deleteCardGroup, addDailyStudyDuration, getDailyStudyMap } from '../../utils/db'
+import { cardGroupCollection, cardCollection, favoriteCollection, studyRecordCollection, generateId, deleteCardGroup, addDailyStudyDuration, getDailyStudyMap } from '../../utils/db'
 import { showErrorToast } from '../../utils/error'
 import type { IAppOption } from '../../utils/types'
 import { enableShareMenu } from '../../utils/share'
@@ -355,6 +355,17 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
 
   async loadTodayStudyTime() {
     const today = new Date().toISOString().split('T')[0]
+
+    // 1. 总是先从本地 study_daily 读取基础值（保证离线/未登录也有数据显示）
+    const localDaily = getDailyStudyMap()[today]
+    const localTotal = localDaily?.groups[this.data.groupId] || 0
+    this.setData({
+      'todayStats.studiedTime': localTotal,
+      formattedStudiedTime: this.formatTime(localTotal)
+    })
+    console.log('[CardDetail] 今日学习时长（本地）', localTotal, '秒')
+
+    // 2. 如有登录，尝试从云端获取补充（跨设备汇总数据）
     const username = app.globalData.userInfo?.username
     if (!username) return
 
@@ -369,23 +380,17 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       })
       const res = result as { success: boolean; total: number }
       if (res.success) {
-        // 云端总时长（包含其他设备同步的数据）
+        // 云端总时长（包含其他设备同步的数据）与当前显示值合并
         const total = Math.max(res.total, this.data.todayStats.studiedTime)
         this.setData({
           'todayStats.studiedTime': total,
           formattedStudiedTime: this.formatTime(total)
         })
-        console.log('[CardDetail] 今日学习时长', total, '秒')
+        console.log('[CardDetail] 今日学习时长（云端汇总）', total, '秒')
       }
     } catch (err) {
-      console.error('[CardDetail] 加载今日学习时长失败，使用本地数据', err)
-      // 离线回退：从本地 daily 数据读取
-      const local = getDailyStudyMap()[today]
-      const total = local?.groups[this.data.groupId] || 0
-      this.setData({
-        'todayStats.studiedTime': total,
-        formattedStudiedTime: this.formatTime(total)
-      })
+      console.error('[CardDetail] 云端获取今日学习时长失败，使用本地数据', err)
+      // 本地已在上方设置，无需重复操作
     }
   },
 
@@ -546,14 +551,30 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     const today = new Date().toISOString().split('T')[0]
     addDailyStudyDuration(today, this.data.groupId, duration)
 
-    // 2. 更新界面显示
+    // 2. 保存个体学习记录到本地（供统计页离线回退和备份使用）
+    try {
+      await studyRecordCollection.add({
+        data: {
+          recordId: generateId(),
+          userId: app.globalData.userInfo?.username || 'local',
+          groupId: this.data.groupId,
+          studyDuration: duration,
+          studyDate: new Date(),
+          updateTime: Date.now()
+        }
+      })
+    } catch (err) {
+      console.warn('[CardDetail] 保存本地学习记录失败', err)
+    }
+
+    // 3. 更新界面显示
     const newTotal = this.data.todayStats.studiedTime + duration
     this.setData({
       'todayStats.studiedTime': newTotal,
       formattedStudiedTime: this.formatTime(newTotal)
     })
 
-    // 3. 同步到云端（仅在退出学习时）
+    // 4. 同步到云端（仅在退出学习时）
     if (syncToCloud) {
       const username = app.globalData.userInfo?.username
       if (!username) {

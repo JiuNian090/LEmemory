@@ -2,7 +2,7 @@
  * 本地统计计算工具
  * 替代原来的 statistics_get 云函数，从本地存储读取数据计算统计结果
  */
-import { getLocalStorageData } from './db'
+import { getLocalStorageData, getDailyStudyMap } from './db'
 import type { StudyRecord, CardGroup, Card, StatisticsResult, PeriodType } from './types'
 
 const DAY_MS = 86400000
@@ -245,7 +245,30 @@ export function computeStatistics(
   const prevStart = new Date(start.getTime() - lengthMs)
   prevStart.setHours(0, 0, 0, 0)
 
-  const allRecords = cloudRecords ?? (getLocalStorageData(STORAGE_KEYS.STUDY_RECORDS) as StudyRecord[])
+  const allRecords = cloudRecords ?? (() => {
+    const localRecords = getLocalStorageData(STORAGE_KEYS.STUDY_RECORDS) as StudyRecord[]
+
+    // 若 study_records 为空，从 study_daily 重建（兼容旧数据+离线场景）
+    if (localRecords.length === 0) {
+      const dailyMap = getDailyStudyMap()
+      const rebuilt: StudyRecord[] = []
+      for (const [dateStr, entry] of Object.entries(dailyMap)) {
+        for (const [groupId, duration] of Object.entries(entry.groups)) {
+          rebuilt.push({
+            recordId: '',
+            userId: 'local',
+            groupId,
+            studyDuration: duration,
+            studyDate: new Date(dateStr + 'T00:00:00'),
+            updateTime: 0
+          })
+        }
+      }
+      return rebuilt
+    }
+
+    return localRecords
+  })()
 
   const records = allRecords.filter(r => {
     const d = r.studyDate instanceof Date ? r.studyDate : new Date(r.studyDate)
