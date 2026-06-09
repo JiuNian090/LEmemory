@@ -23,13 +23,13 @@
     </view>
     <view class="section-body">
       <view class="btn-grid">
-        <view class="grid-btn backup-btn" bindtap="onCreateBackup">
+        <view class="grid-btn backup-btn" bindtap="onSyncToCloud">
           <text class="btn-icon">⬆️</text>
-          <text class="btn-text">备份</text>
+          <text class="btn-text">同步到云端</text>
         </view>
         <view class="grid-btn restore-btn" bindtap="onRestoreLatest">
           <text class="btn-icon">⬇️</text>
-          <text class="btn-text">恢复</text>
+          <text class="btn-text">从云端恢复</text>
         </view>
       </view>
     </view>
@@ -114,32 +114,6 @@
   </view>
 
   <!-- 备份描述弹窗 -->
-  <view wx:if="{{ showDescriptionModal }}" class="modal-mask" bindtap="cancelCreateBackup">
-    <view class="modal-container" catchtap="stopPropagation">
-      <view class="modal-header">
-        <view class="modal-title-wrapper">
-          <text class="modal-title-icon">📦</text>
-          <text class="modal-title">创建备份</text>
-        </view>
-        <view class="modal-close" bindtap="cancelCreateBackup">
-          <text class="close-icon">✕</text>
-        </view>
-      </view>
-      <view class="modal-body">
-        <view class="form-card">
-          <view class="form-group">
-            <text class="form-label">备份描述（可选）</text>
-            <input class="form-input" placeholder="描述一下这个备份..." value="{{ currentDescription }}" bindinput="onDescriptionInput" />
-          </view>
-        </view>
-      </view>
-      <view class="modal-footer">
-        <button class="modal-btn btn-cancel" bindtap="cancelCreateBackup">取消</button>
-        <button class="modal-btn btn-confirm" bindtap="confirmCreateBackup">创建</button>
-      </view>
-    </view>
-  </view>
-
   <!-- 恢复确认弹窗 -->
   <view wx:if="{{ showRestoreConfirm }}" class="modal-mask" bindtap="cancelRestoreBackup">
     <view class="modal-container" catchtap="stopPropagation">

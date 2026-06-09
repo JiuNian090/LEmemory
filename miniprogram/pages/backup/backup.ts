@@ -24,8 +24,6 @@ interface BackupPageData {
     usedPercent: number
   }
   loading: boolean
-  showDescriptionModal: boolean
-  currentDescription: string
   showRestoreConfirm: boolean
   selectedBackup: BackupRecord | null
   lastCloudCheckTime: number
@@ -47,8 +45,6 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
       usedPercent: 0
     },
     loading: true,
-    showDescriptionModal: false,
-    currentDescription: '',
     showRestoreConfirm: false,
     selectedBackup: null,
     lastCloudCheckTime: 0,
@@ -280,45 +276,26 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
   },
 
-  onCreateBackup() {
-    this.setData({ showDescriptionModal: true, currentDescription: '' })
-  },
-
-  onDescriptionInput(e: WechatMiniprogram.Input) {
-    this.setData({ currentDescription: e.detail.value })
-  },
-
-  async confirmCreateBackup() {
-    this.setData({ showDescriptionModal: false })
-
-    const result = await syncManager.createBackup(this.data.currentDescription)
-
-    if (result.success) {
-      wx.showToast({ title: result.message, icon: 'success' })
-      // 备份后更新本地同步状态
-      const localHash = syncManager.computeLocalHash()
-      const now = Date.now()
-      wx.setStorageSync('lastSyncHash', localHash)
-      wx.setStorageSync('lastSyncTime', now)
-      wx.setStorageSync('lastBackupHash', localHash)
-      wx.setStorageSync('lastBackupTime', new Date().toISOString())
-      this.setData({
-        lastSyncHash: localHash,
-        lastSyncTime: now,
-        lastLocalUpdate: now,
-        backupStatus: {
-          type: 'synced',
-          label: '已同步 ' + syncManager.formatBackupTime(new Date().toISOString())
+  /**
+   * 点击"同步到云端"按钮
+   */
+  onSyncToCloud() {
+    wx.showModal({
+      title: '同步到云端',
+      content: '将本地数据同步到云端，其他设备可通过恢复获取最新数据。',
+      success: async (res) => {
+        if (res.confirm) {
+          const result = await syncManager.syncToCloud()
+          if (result.success) {
+            wx.showToast({ title: result.message, icon: 'success' })
+            // 刷新状态
+            this.loadData()
+          } else {
+            wx.showToast({ title: result.message, icon: 'none' })
+          }
         }
-      })
-      this.loadData()
-    } else {
-      wx.showToast({ title: result.message, icon: 'none' })
-    }
-  },
-
-  cancelCreateBackup() {
-    this.setData({ showDescriptionModal: false })
+      }
+    })
   },
 
   onRestoreBackup(e: WechatMiniprogram.TouchEvent) {

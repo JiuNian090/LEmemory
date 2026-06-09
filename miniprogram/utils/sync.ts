@@ -47,89 +47,91 @@ class SyncManager {
   }
 
   /**
-   * 在云端创建备份节点
+   * 同步数据到云端（哈希对比 → 有差异才上传）
+   * 只保留一份云端备份，不做多版本快照
    */
-  async createBackup(description?: string): Promise<{
+  async syncToCloud(): Promise<{
     success: boolean
     message: string
-    backupId?: string
   }> {
     try {
       const userId = await getUserId()
       if (userId === 'local_user') {
-        return { success: false, message: '需要先登录才能备份' }
+        return { success: false, message: '未登录或云开发不可用，请先登录' }
       }
 
-      wx.showLoading({ title: '备份中...' })
+      wx.showLoading({ title: '检查数据状态...' })
+
+      // 1. 计算本地哈希
+      const localHash = computeLocalHash()
+
+      // 2. 获取云端备份信息，对比哈希
+      try {
+        const cloudInfo = await this.getLatestBackupInfo()
+        if (cloudInfo.success && cloudInfo.hasBackup && cloudInfo.backupHash === localHash) {
+          wx.hideLoading()
+          // 更新同步时间，标记为已同步
+          wx.setStorageSync('lastSyncHash', localHash)
+          wx.setStorageSync('lastSyncTime', Date.now())
+          return { success: true, message: '数据已同步，无需上传' }
+        }
+      } catch (_) {
+        // 忽略错误，继续执行上传
+      }
+
+      // 3. 哈希不一致或无云端备份 → 执行上传
+      wx.showLoading({ title: '同步中...' })
 
       const localData = exportAllLocalData()
       const dataStr = JSON.stringify(localData)
-      const dataSize = dataStr.length
 
-      const backupId = generateId()
-      let cloudSuccess = false
-
-      // 上传到云端备份集合
-      try {
-        const { result } = await wx.cloud.callFunction({
-          name: 'backup_manager',
-          data: {
-            action: 'create',
-            backupId,
-            description: description || '',
-            appVersion: '1.0.0',
-            backupData: localData,
-            dataSize,
-            cardGroupsCount: localData.cardGroups.length,
-            cardsCount: localData.cards.length,
-            studyRecordsCount: localData.studyRecords.length,
-            favoritesCount: localData.favorites.length
-          }
-        })
-        const createResult = result as { success: boolean; error?: string }
-        if (createResult.success) {
-          cloudSuccess = true
-        } else {
-          console.warn('[Sync] 云端备份返回失败:', createResult.error)
+      const { result } = await wx.cloud.callFunction({
+        name: 'backup_manager',
+        data: {
+          action: 'create',
+          backupId: generateId(),
+          backupData: localData,
+          dataSize: dataStr.length,
+          cardGroupsCount: localData.cardGroups.length,
+          cardsCount: localData.cards.length,
+          studyRecordsCount: localData.studyRecords.length,
+          favoritesCount: localData.favorites.length
         }
-      } catch (err: any) {
-        console.warn('[Sync] 云端备份网络失败', err)
+      })
+
+      const createResult = result as { success: boolean; error?: string }
+      if (!createResult.success) {
+        wx.hideLoading()
+        return { success: false, message: createResult.error || '同步失败，请重试' }
       }
 
-      // 本地也存一份副本（无论云端是否成功）
-      const backups = getLocalStorageData(BACKUP_STORAGE_KEY)
-      backups.push({
-        backupId,
-        userId,
-        backupTime: new Date().toISOString(),
-        dataSize,
-        description: description || '',
-        cardGroupsCount: localData.cardGroups.length,
-        cardsCount: localData.cards.length,
-        studyRecordsCount: localData.studyRecords.length,
-        favoritesCount: localData.favorites.length,
-        backupData: localData
-      })
-      setLocalStorageData(BACKUP_STORAGE_KEY, backups.slice(-30))
-
-      // 更新备份时间戳和哈希
-      const localHash = computeLocalHash()
+      // 4. 更新本地同步状态
+      wx.setStorageSync('lastSyncHash', localHash)
+      wx.setStorageSync('lastSyncTime', Date.now())
       wx.setStorageSync('lastBackupHash', localHash)
       wx.setStorageSync('lastBackupTime', new Date().toISOString())
 
       wx.hideLoading()
+      return { success: true, message: '同步成功' }
 
-      if (cloudSuccess) {
-        return { success: true, message: '备份成功（云端+本地）', backupId }
-      } else {
-        return { success: true, message: '备份成功（仅本地，云端备份失败）', backupId }
-      }
-
-    } catch (error) {
+    } catch (error: any) {
       wx.hideLoading()
-      console.error('[Sync] 备份失败', error)
-      return { success: false, message: '备份失败：' + (error instanceof Error ? error.message : '未知错误') }
+      console.error('[Sync] 同步失败', error)
+      return { success: false, message: '同步失败：' + (error.message || '未知错误') }
     }
+  }
+
+  /**
+   * [已废弃] 保留旧方法引用，指向 syncToCloud
+   * @deprecated 使用 syncToCloud 替代
+   */
+  async createBackup(_description?: string): Promise<{
+    success: boolean
+    message: string
+    backupId?: string
+  }> {
+    const result = await this.syncToCloud()
+    return { ...result, backupId: '' }
   }
 
   /**
