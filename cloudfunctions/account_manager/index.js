@@ -17,14 +17,26 @@ function verifyPassword(password, hash, salt) {
   return verifyHash === hash
 }
 
+// 生成 session token
+function generateSessionToken() {
+  return crypto.randomBytes(32).toString('hex')
+}
+
 exports.main = async (event, context) => {
-  const { action, username, password, nickName, avatarUrl, avatarHash, rememberPassword, oldPassword, newPassword } = event
+  const { action, username, password, nickName, avatarUrl, avatarHash, rememberPassword, oldPassword, newPassword, sessionToken } = event
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
 
   try {
     if (action === 'register') {
-      // 注册新账号
+      // 注册新账号 — 输入校验
+      if (!username || typeof username !== 'string' || username.trim().length < 3) {
+        return { success: false, error: '用户名至少3个字符' }
+      }
+      if (!password || password.length < 6) {
+        return { success: false, error: '密码至少6个字符' }
+      }
+
       const { data: existingUsers } = await db.collection('users').where({
         username: username
       }).get()
@@ -80,10 +92,14 @@ exports.main = async (event, context) => {
         }
       }
 
-      // 更新登录时间
+      // 更新登录时间，并绑定当前微信身份
+      // 生成新的 sessionToken
+      const sessionToken = generateSessionToken()
       await db.collection('users').doc(user._id).update({
         data: {
-          lastLoginTime: new Date()
+          _openid: wxContext.OPENID,
+          lastLoginTime: new Date(),
+          sessionToken: sessionToken
         }
       })
 
@@ -97,12 +113,14 @@ exports.main = async (event, context) => {
           avatarHash: user.avatarHash || '',
           passwordVersion: user.passwordVersion || 1,
           createTime: user.createTime,
-          lastLoginTime: new Date()
+          lastLoginTime: Date.now()
         },
+        sessionToken: sessionToken,
         message: '登录成功'
       }
     } else if (action === 'checkUsername') {
       // 检查用户名是否存在
+      // 注意：此接口存在用户名枚举风险，生产环境应添加频率限制（如每IP每分钟最多10次）
       const { data: users } = await db.collection('users').where({
         username: username
       }).get()
@@ -110,6 +128,35 @@ exports.main = async (event, context) => {
       return {
         success: true,
         exists: users.length > 0
+      }
+    } else if (action === 'verifySession') {
+      // 通过 sessionToken 验证身份（用于自动登录，无需明文密码）
+      if (!username || !sessionToken) {
+        return { success: false, error: '参数不完整' }
+      }
+
+      const { data: users } = await db.collection('users').where({
+        username: username,
+        sessionToken: sessionToken
+      }).get()
+
+      if (users.length === 0) {
+        return { success: false, error: '会话已过期，请重新登录' }
+      }
+
+      const user = users[0]
+      return {
+        success: true,
+        user: {
+          _openid: user._openid,
+          username: user.username,
+          nickName: user.nickName,
+          avatarUrl: user.avatarUrl,
+          avatarHash: user.avatarHash || '',
+          passwordVersion: user.passwordVersion || 1,
+          createTime: user.createTime,
+          lastLoginTime: user.lastLoginTime
+        }
       }
     } else if (action === 'getUser') {
       // 获取用户信息

@@ -14,6 +14,7 @@ exports.main = async (event, context) => {
     if (data.length === 0) {
       await db.collection('users').add({
         data: {
+          _openid: wxContext.OPENID,
           nickName,
           avatarUrl,
           createTime: new Date()
@@ -36,7 +37,7 @@ exports.main = async (event, context) => {
     console.error(err)
     return {
       success: false,
-      error: err
+      error: err.message || '服务器内部错误'
     }
   }
 }

@@ -11,7 +11,7 @@ import {
   drawPieChart
 } from '../../utils/charts'
 import { computeStatistics } from '../../utils/statistics'
-import type { PeriodType, StatisticsResult, PieSlice, StudyRecord } from '../../utils/types'
+import type { PeriodType, StatisticsResult, StudyRecord } from '../../utils/types'
 import { enableShareMenu } from '../../utils/share'
 import type { IAppOption } from '../../utils/types'
 
@@ -153,7 +153,31 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
 
       // 注入饼图颜色
       const theme = getThemeColors()
-      const groupPieData = data.groupPieData.map((s, i) => ({
+      // 处理饼图数据：超过 7 个组时合并为「其他」
+      let rawPieData = data.groupPieData.map(s => ({
+        groupId: s.groupId,
+        title: s.title,
+        value: s.value,
+        percentage: s.percentage,
+        color: s.color
+      }))
+
+      if (rawPieData.length > 7) {
+        const top7 = rawPieData.slice(0, 7)
+        const otherTotal = rawPieData.slice(7).reduce((s, g) => s + g.value, 0)
+        if (otherTotal > 0) {
+          top7.push({ groupId: 'other', title: '其他', value: otherTotal, percentage: 0, color: '' })
+        }
+        rawPieData = top7
+
+        // 重新计算百分比
+        const totalForPercent = rawPieData.reduce((s, g) => s + g.value, 0)
+        rawPieData.forEach(s => {
+          s.percentage = totalForPercent > 0 ? (s.value / totalForPercent) * 100 : 0
+        })
+      }
+
+      const groupPieData = rawPieData.map((s, i) => ({
         groupId: s.groupId,
         title: s.title,
         value: s.value,
@@ -176,7 +200,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
 
       // 等下一帧绘制
       wx.nextTick(() => this.drawAllCharts())
-    } catch (err) {
+    } catch (err: any) {
       console.error('[StatisticsPage] 计算失败', err)
       if (showLoading) {
         wx.showToast({ title: '计算失败', icon: 'none' })
@@ -251,6 +275,8 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
   },
 
   drawPieChart() {
+    // 从 currentResult 读取最新数据
+    const groupPieData = this.currentResult?.groupPieData || []
     const query = wx.createSelectorQuery()
     query.select('#pieChart')
       .fields({ node: true, size: true })
@@ -262,15 +288,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
         const width = (canvasInfo.width || 0) * dpr
         const height = (canvasInfo.height || 0) * dpr
         if (width === 0 || height === 0) return
-        // 直接使用 data.groupPieData（含已注入的颜色）
-        const data = this.data.groupPieData.map(s => ({
-          groupId: s.groupId,
-          title: s.title,
-          value: s.value,
-          percentage: s.percentage,
-          color: s.color
-        } as PieSlice))
-        drawPieChart(canvas, data, width, height)
+        drawPieChart(canvas, groupPieData, width, height)
       })
   },
 
@@ -293,11 +311,14 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
   onDateChange(e: WechatMiniprogram.TouchEvent) {
     const field = e.currentTarget.dataset.field as 'start' | 'end'
     const value = e.detail.value
+    const fieldMap: Record<string, string> = { start: 'startDate', end: 'endDate' }
+    const dataField = fieldMap[field]
+    if (!dataField) return
     this.setData({
-      [field]: value,
+      [dataField]: value,
       activeQuickBtn: '',
       periodLabel: '周期'
-    } as any)
+    })
     this.lastInput = null
     this.loadStatistics(true)
   },
@@ -335,7 +356,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
   saveGoalToStorage(minutes: number) {
     try {
       wx.setStorageSync(GOAL_STORAGE_KEY, minutes)
-    } catch (err) {
+    } catch (err: any) {
       console.error('[StatisticsPage] 保存目标失败', err)
     }
   },
@@ -363,7 +384,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
         return dailyDataToRecords(res.data, username)
       }
       console.warn('[StatisticsPage] 云端拉取失败，使用本地数据', res)
-    } catch (err) {
+    } catch (err: any) {
       console.error('[StatisticsPage] 云端拉取异常，使用本地数据', err)
     }
     return undefined

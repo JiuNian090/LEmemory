@@ -149,7 +149,7 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
           this.setData({ backupStatus: { type: 'unbacked', label: STATUS_LABELS.unbacked } })
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[BackupPage] 检查备份状态失败', err)
       if (this.data.cachedCloudStatus) {
         this.useCachedStatus()
@@ -236,15 +236,22 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
 
     // 已同步：本地哈希与上次同步哈希一致
     if (lastSyncHash && localHash === lastSyncHash) {
-      const syncTime = lastSyncTime || cloudBackupTime || lastLocalUpdate
-      const syncTimeStr = syncTime ? syncManager.formatBackupTime(new Date(syncTime).toISOString()) : ''
-      this.setData({ backupStatus: { type: 'synced', label: '已同步' + (syncTimeStr ? ' ' + syncTimeStr : '') } })
+      if (!lastSyncTime) {
+        this.setData({ backupStatus: { type: 'synced', label: '从未同步' } })
+        return
+      }
+      const syncTimeStr = syncManager.formatBackupTime(new Date(lastSyncTime).toISOString())
+      this.setData({ backupStatus: { type: 'synced', label: '已同步 ' + syncTimeStr } })
       return
     }
 
     // 已同步：本地哈希与云端哈希一致
     if (cloudHash && localHash === cloudHash) {
-      const syncTime = lastSyncTime || cloudBackupTime || lastLocalUpdate
+      if (!lastSyncTime && !cloudBackupTime) {
+        this.setData({ backupStatus: { type: 'synced', label: '从未同步' } })
+        return
+      }
+      const syncTime = lastSyncTime || cloudBackupTime
       const syncTimeStr = syncTime ? syncManager.formatBackupTime(new Date(syncTime).toISOString()) : ''
       this.setData({ backupStatus: { type: 'synced', label: '已同步' + (syncTimeStr ? ' ' + syncTimeStr : '') } })
       return
@@ -359,6 +366,7 @@ Page<BackupPageData, WechatMiniprogram.IAnyObject>({
       content: '确定要删除这个备份吗？删除后无法恢复。',
       success: async (res) => {
         if (res.confirm) {
+          if (!backup?.backupId) return
           const success = await syncManager.deleteBackup(backup.backupId)
           if (success) {
             wx.showToast({ title: '删除成功', icon: 'success' })

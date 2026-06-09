@@ -4,7 +4,8 @@ import { syncUserProfile } from './utils/userSync'
 
 App<IAppOption>({
   globalData: {
-    userInfo: null
+    userInfo: null,
+    appVersion: '1.2.5'
   },
   onLaunch() {
     // 尝试初始化云开发，但不强制要求
@@ -15,7 +16,7 @@ App<IAppOption>({
           traceUser: true,
         })
         console.log('[App] 云开发初始化成功')
-      } catch (err) {
+      } catch (err: any) {
         console.log('[App] 云开发初始化失败，将使用本地存储模式', err)
         // 不显示错误弹窗，静默降级到本地存储
       }

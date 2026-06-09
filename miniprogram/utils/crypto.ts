@@ -127,14 +127,8 @@ export function setEncryptedStorage(key: string, data: any): boolean {
     console.log('[Crypto] 数据加密存储成功', key)
     return true
   } catch (error) {
-    console.error('[Crypto] 加密存储失败', error)
-    // 降级到明文存储
-    try {
-      wx.setStorageSync(key, data)
-      return true
-    } catch {
-      return false
-    }
+    console.error('[Crypto] 加密存储失败:', error)
+    throw new Error('数据加密存储失败')
   }
 }
 
@@ -171,14 +165,9 @@ export function getEncryptedStorage(key: string): any {
 
         return parsed
       } catch {
-        // 可能是明文存储的数据（JSON 字符串）
-        try {
-          return JSON.parse(encrypted)
-        } catch {
-          // 完全未知格式，安全降级
-          console.warn('[Crypto] 无法解析存储数据，key:', key)
-          return null
-        }
+        // 完全未知格式，安全降级
+        console.warn('[Crypto] 无法解析存储数据，key:', key)
+        return null
       }
     }
   } catch (error) {
@@ -192,11 +181,13 @@ export function getEncryptedStorage(key: string): any {
  */
 export function generateDataHash(data: any): string {
   const jsonString = JSON.stringify(data)
-  let hash = 0
+  // FNV-1a 64-bit（比 DJB2 32-bit 更抗碰撞）
+  const FNV_OFFSET = 0xcbf29ce484222325n
+  const FNV_PRIME = 0x100000001b3n
+  let hash = FNV_OFFSET
   for (let i = 0; i < jsonString.length; i++) {
-    const char = jsonString.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
-    hash = hash & hash
+    hash ^= BigInt(jsonString.charCodeAt(i))
+    hash = (hash * FNV_PRIME) & 0xffffffffffffffffn
   }
   return hash.toString(36)
 }

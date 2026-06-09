@@ -131,7 +131,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   /** 当前会话累积秒数 */
   sessionSeconds: 0,
 
-  onLoad(options: any) {
+  async onLoad(options: any) {
     enableShareMenu()
     const title = options.title ? decodeURIComponent(options.title) : ''
     const description = options.description ? decodeURIComponent(options.description) : ''
@@ -148,16 +148,9 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     // 从卡牌组加载 emoji
     this.loadGroupEmoji(options.groupId)
 
-    this.loadCards()
-    this.loadFavorites()
-
-    if (options.studying === '1') {
-      this.setData({ isStudying: true })
-    }
-    if (options.quiz === '1') {
-      this.shuffleCards()
-      this.setData({ isStudying: true, isQuiz: true })
-    }
+    // 先加载卡牌，再加载收藏（loadFavorites 依赖 cards 数据）
+    await this.loadCards()
+    await this.loadFavorites()
   },
 
   onShow() {
@@ -294,7 +287,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
         favoriteCardIds
       })
       console.log('[CardDetail] 加载收藏成功', favorites.length)
-    } catch (err) {
+    } catch (err: any) {
       console.error('[CardDetail] 加载收藏失败', err)
     }
   },
@@ -388,7 +381,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
         })
         console.log('[CardDetail] 今日学习时长（云端汇总）', total, '秒')
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[CardDetail] 云端获取今日学习时长失败，使用本地数据', err)
       // 本地已在上方设置，无需重复操作
     }
@@ -418,8 +411,8 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       })
       return
     }
-    const url = `/pages/cardDetail/cardDetail?groupId=${this.data.groupId}&title=${encodeURIComponent(this.data.title)}&description=${encodeURIComponent(this.data.description)}&studying=1`
-    wx.navigateTo({ url })
+    this.setData({ isStudying: true, isQuiz: false, currentCardIndex: 0, isFlipped: false })
+    this.startStudyTimer()
   },
 
   /**
@@ -433,8 +426,17 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       })
       return
     }
-    const url = `/pages/cardDetail/cardDetail?groupId=${this.data.groupId}&title=${encodeURIComponent(this.data.title)}&description=${encodeURIComponent(this.data.description)}&quiz=1`
-    wx.navigateTo({ url })
+    this.shuffleCards()
+    this.setData({ isStudying: true, isQuiz: true, currentCardIndex: 0, isFlipped: false })
+    this.startStudyTimer()
+  },
+
+  /**
+   * 退出学习/测验模式
+   */
+  exitStudyMode() {
+    this.stopStudyTimer()
+    this.setData({ isStudying: false, isQuiz: false, currentCardIndex: 0, isFlipped: false })
   },
 
   /**
@@ -563,7 +565,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
           updateTime: Date.now()
         }
       })
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[CardDetail] 保存本地学习记录失败', err)
     }
 
@@ -598,7 +600,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
         } else {
           console.warn('[CardDetail] 云端同步失败', res)
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('[CardDetail] 云端同步失败', err)
       }
     }
@@ -833,7 +835,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       this.closeDialog()
       this.loadCards()
       this.calculateStats()
-    } catch (err) {
+    } catch (err: any) {
       console.error('[CardDetail] 添加卡牌失败', err)
       wx.showToast({
         title: '添加失败',
@@ -852,7 +854,12 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       wx.showLoading({ title: '更新中...' })
 
       const card = this.data.cards.find(c => c.cardId === cardId)
-      if (card && card._id) {
+      if (!card) {
+        wx.hideLoading()
+        wx.showToast({ title: '未找到该卡片', icon: 'none' })
+        return
+      }
+      if (card._id) {
         await cardCollection.doc(card._id).update({
           data: {
             front: front.trim(),
@@ -868,7 +875,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
         this.closeDialog()
         this.loadCards()
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[CardDetail] 更新卡牌失败', err)
       wx.showToast({
         title: '更新失败',
@@ -905,7 +912,12 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       wx.showLoading({ title: '删除中...' })
 
       const card = this.data.cards.find(c => c.cardId === cardId)
-      if (card && card._id) {
+      if (!card) {
+        wx.hideLoading()
+        wx.showToast({ title: '未找到该卡片', icon: 'none' })
+        return
+      }
+      if (card._id) {
         await cardCollection.doc(card._id).remove()
         
         wx.showToast({
@@ -916,7 +928,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
         this.loadCards()
         this.calculateStats()
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[CardDetail] 删除卡牌失败', err)
       wx.showToast({
         title: '删除失败',
@@ -939,13 +951,16 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
         const favorite = this.data.favorites.find(f => f.cardId === cardid)
         if (favorite && favorite._id) {
           await favoriteCollection.doc(favorite._id).remove()
+          // 只有删除成功后，才更新本地状态
+          const newFavoriteCardIds = this.data.favoriteCardIds.filter(id => id !== cardid)
+          this.setData({
+            favoriteCardIds: newFavoriteCardIds
+          })
+        } else {
+          // 本地找不到收藏记录，触发重新加载
+          await this.loadFavorites()
+          return
         }
-        
-        const newFavoriteCardIds = this.data.favoriteCardIds.filter(id => id !== cardid)
-        
-        this.setData({
-          favoriteCardIds: newFavoriteCardIds
-        })
 
         wx.showToast({
           title: '取消收藏',
@@ -977,7 +992,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       if (this.data.currentTab === 3) {
         this.loadFavorites()
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[CardDetail] 操作收藏失败', err)
       wx.showToast({
         title: '操作失败',
@@ -1044,7 +1059,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       setTimeout(() => {
         wx.navigateBack()
       }, 1000)
-    } catch (err) {
+    } catch (err: any) {
       console.error('[CardDetail] 删除卡牌组失败', err)
       wx.showToast({
         title: '删除失败',
@@ -1136,7 +1151,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
           })
         }
       })
-    } catch (err) {
+    } catch (err: any) {
       console.error('[CardDetail] 写入文件失败', err)
       wx.showToast({
         title: '分享失败',
@@ -1191,7 +1206,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
           return
         }
         // 尝试提取 JSON 数组（支持 markdown 代码块包裹）
-        const jsonMatch = data.match(/```(?:json)?\s*([\s\S]*?)```/) || data.match(/\[[\s\S]*\]/)
+        const jsonMatch = data.match(/```(?:json)?\s*([\s\S]*?)```/) || data.match(/\[[\s\S]*?\]/) || data.match(/\{[\s\S]*?\}/)
         const jsonStr = jsonMatch ? jsonMatch[1] || jsonMatch[0] : data
         this.processImportData(jsonStr)
       },
@@ -1245,7 +1260,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
           }
         }
       })
-    } catch (err) {
+    } catch (err: any) {
       console.error('[CardDetail] JSON 解析失败', err)
       wx.showToast({
         title: '文件格式错误',
@@ -1281,7 +1296,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       this.calculateStats()
 
       console.log('[CardDetail] 导入卡牌完成', cardsToImport.length)
-    } catch (err) {
+    } catch (err: any) {
       console.error('[CardDetail] 导入卡牌失败', err)
       wx.showToast({
         title: '导入失败',

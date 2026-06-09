@@ -364,13 +364,13 @@ export function drawPieChart(
   ctx.font = '10px sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
-  data.slice(0, 6).forEach((slice, i) => {
+  data.slice(0, 7).forEach((slice, i) => {
     const y = legendY + i * lineHeight
     const color = slice.color || theme.chartPalette[i % theme.chartPalette.length]
     ctx.fillStyle = color
     ctx.fillRect(legendX, y - 4, 8, 8)
     ctx.fillStyle = theme.textPrimary
-    const label = slice.title.length > 6 ? slice.title.slice(0, 6) + '…' : slice.title
+    const label = slice.title.length > 8 ? slice.title.slice(0, 8) + '…' : slice.title
     ctx.fillText(`${label} ${Math.round(slice.percentage)}%`, legendX + 14, y)
   })
 

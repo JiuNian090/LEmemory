@@ -59,7 +59,7 @@ Page<ShareImportPageData, WechatMiniprogram.IAnyObject>({
   },
 
   /**
-   * 解析 URL 中的 base64 编码数据
+   * 解析 URL 中的编码数据
    */
   parseAndLoadData(encodedData: string) {
     try {
@@ -87,7 +87,7 @@ Page<ShareImportPageData, WechatMiniprogram.IAnyObject>({
       }
 
       this.displaySharedData({ cards, group })
-    } catch (err) {
+    } catch (err: any) {
       console.error('[ShareImport] 数据解析失败', err)
       this.setData({
         loading: false,
@@ -161,8 +161,8 @@ Page<ShareImportPageData, WechatMiniprogram.IAnyObject>({
         }
         // 尝试提取 JSON（支持 markdown 代码块包裹）
         const jsonMatch = data.match(/```(?:json)?\s*([\s\S]*?)```/) ||
-          data.match(/\[[\s\S]*\]/) ||
-          data.match(/\{[\s\S]*\}/)
+          data.match(/\[[\s\S]*?\]/) ||
+          data.match(/\{[\s\S]*?\}/)
         const jsonStr = jsonMatch ? jsonMatch[1] || jsonMatch[0] : data
         this.processImportData(jsonStr)
       },
@@ -211,7 +211,7 @@ Page<ShareImportPageData, WechatMiniprogram.IAnyObject>({
         mode: 'data',
         loadError: ''
       })
-    } catch (err) {
+    } catch (err: any) {
       console.error('[ShareImport] JSON 解析失败', err)
       wx.showToast({ title: '文件格式错误', icon: 'none' })
     }
@@ -221,15 +221,18 @@ Page<ShareImportPageData, WechatMiniprogram.IAnyObject>({
    * 导入卡牌到我的卡牌组
    */
   async importGroup() {
-    if (this.data.importing || this.data.cards.length === 0) return
+    if (this.data.importing || this.data.imported || this.data.cards.length === 0) return
 
     this.setData({ importing: true })
+
+    let createdGroupId: string | null = null
+    const createdCardIds: string[] = []
 
     try {
       const newGroupId = generateId()
       const { title, description } = this.data.group
 
-      await cardGroupCollection.add({
+      const groupRes = await cardGroupCollection.add({
         data: {
           groupId: newGroupId,
           title: title || '导入的卡牌组',
@@ -238,9 +241,10 @@ Page<ShareImportPageData, WechatMiniprogram.IAnyObject>({
           updateTime: new Date()
         }
       })
+      createdGroupId = groupRes._id
 
       for (const card of this.data.cards) {
-        await cardCollection.add({
+        const cardRes = await cardCollection.add({
           data: {
             cardId: generateId(),
             groupId: newGroupId,
@@ -251,6 +255,7 @@ Page<ShareImportPageData, WechatMiniprogram.IAnyObject>({
             reviewCount: 0
           }
         })
+        createdCardIds.push(cardRes._id)
       }
 
       this.setData({ imported: true, importing: false })
@@ -264,8 +269,18 @@ Page<ShareImportPageData, WechatMiniprogram.IAnyObject>({
       }, 1500)
     } catch (err: any) {
       console.error('[ShareImport] 导入失败', err)
+
+      // 回滚：删除已创建的卡片
+      for (const cardId of createdCardIds) {
+        try { await cardCollection.doc(cardId).remove() } catch { /* 忽略单条删除失败 */ }
+      }
+      // 删除已创建的卡片组
+      if (createdGroupId) {
+        try { await cardGroupCollection.doc(createdGroupId).remove() } catch { /* 忽略删除失败 */ }
+      }
+
       this.setData({ importing: false })
-      wx.showToast({ title: '导入失败', icon: 'none' })
+      wx.showToast({ title: '导入失败，已回滚', icon: 'none' })
     }
   },
 
@@ -277,6 +292,20 @@ Page<ShareImportPageData, WechatMiniprogram.IAnyObject>({
   },
 
   onShareAppMessage() {
+    // 如果有已解析的数据，构建分享链接传递卡片数据
+    const cards = this.data.cards
+    if (cards.length > 0) {
+      const shareData = {
+        group: this.data.group,
+        cards: cards.slice(0, 50), // 限制分享数量
+        summary: { cardCount: cards.length }
+      }
+      const encoded = encodeURIComponent(JSON.stringify(shareData))
+      return {
+        title: `LEmemory - ${this.data.group?.title || '卡牌'} (${cards.length}张)`,
+        path: `/pages/shareImport/shareImport?data=${encoded}`
+      }
+    }
     return {
       title: 'LEmemory - 卡牌导入',
       path: '/pages/shareImport/shareImport'

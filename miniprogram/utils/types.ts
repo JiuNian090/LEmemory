@@ -102,6 +102,7 @@ export interface BackupData {
 export interface IAppOption {
   globalData: {
     userInfo: User | null
+    appVersion: string
   }
   userInfoReadyCallback?: WechatMiniprogram.GetUserProfileSuccessCallbackResult
 }

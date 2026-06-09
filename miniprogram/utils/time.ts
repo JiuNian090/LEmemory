@@ -1,4 +1,5 @@
-export function formatDuration(seconds: number): string {
+export function formatDuration(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.floor(totalSeconds))
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
@@ -39,8 +40,8 @@ export function formatISO(date: Date): string {
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+08:00`
 }
 
-export function parseDate(dateValue: any): Date {
-  if (!dateValue) return new Date()
+export function parseDate(dateValue: any): Date | null {
+  if (!dateValue) return null
   
   if (dateValue instanceof Date) return dateValue
   
@@ -58,12 +59,12 @@ export function parseDate(dateValue: any): Date {
     return new Date(dateValue)
   }
   
-  if (dateValue.seconds || dateValue._seconds) {
-    const timestamp = dateValue.seconds || dateValue._seconds
-    return new Date(timestamp * 1000)
+  const sec = dateValue.seconds ?? dateValue._seconds
+  if (sec !== undefined && sec !== null) {
+    return new Date(sec * 1000)
   }
   
-  return new Date()
+  return null
 }
 
 export function isSameDay(date1: Date, date2: Date): boolean {
@@ -76,7 +77,7 @@ export function isToday(date: Date): boolean {
 
 export function formatRelativeTime(date: Date): string {
   const now = new Date()
-  const diff = now.getTime() - date.getTime()
+  const diff = Math.abs(now.getTime() - date.getTime())
   const minutes = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)

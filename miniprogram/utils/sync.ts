@@ -23,15 +23,24 @@ class SyncManager {
   async onLogout(): Promise<void> {
     console.log('[Sync] 退出登录，清除本地数据')
 
+    // 先在清空前读取需要保留的账户数据
+    let preservedAccounts: any = null
+    let preservedExtra: any = null
+    try { preservedAccounts = wx.getStorageSync('savedAccounts') } catch (_) {}
+    try { preservedExtra = wx.getStorageSync('saved_accounts_preserve') } catch (_) {}
+
     clearAllLocalData()
 
-    try {
-      const preserved = wx.getStorageSync('saved_accounts_preserve')
-      if (preserved) {
-        wx.setStorageSync('savedAccounts', preserved)
+    // 清空后回写保留的账户数据
+    if (preservedAccounts) {
+      try { wx.setStorageSync('savedAccounts', preservedAccounts) } catch (_) {}
+    }
+    if (preservedExtra) {
+      try {
+        wx.setStorageSync('savedAccounts', preservedExtra)
         wx.removeStorageSync('saved_accounts_preserve')
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
     app.globalData.userInfo = null
     console.log('[Sync] 退出登录完成')
@@ -54,8 +63,8 @@ class SyncManager {
       wx.showLoading({ title: '备份中...' })
 
       const localData = exportAllLocalData()
-      const dataJson = JSON.stringify(localData)
-      const dataSize = dataJson.length
+      const dataStr = JSON.stringify(localData)
+      const dataSize = dataStr.length
 
       const backupId = generateId()
       let cloudSuccess = false
@@ -83,7 +92,7 @@ class SyncManager {
         } else {
           console.warn('[Sync] 云端备份返回失败:', createResult.error)
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('[Sync] 云端备份网络失败', err)
       }
 
@@ -151,7 +160,7 @@ class SyncManager {
             favoritesCount: item.favoritesCount
           }))
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('[Sync] 云端获取备份列表失败，降级本地', err)
       }
 
@@ -206,7 +215,7 @@ class SyncManager {
           backupData = getResult.data.backupData as BackupData
           source = '云端'
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('[Sync] 云端获取备份失败，尝试本地', err)
       }
 
@@ -227,10 +236,28 @@ class SyncManager {
         return { success: false, message: '备份不存在（云端和本地均未找到）' }
       }
 
-      // 3. 导入到本地
+      // 3. 验证备份数据结构
+      if (!backupData || typeof backupData !== 'object') {
+        wx.hideLoading()
+        return { success: false, message: '备份数据格式无效' }
+      }
+      if (!Array.isArray(backupData.cardGroups)) {
+        wx.hideLoading()
+        return { success: false, message: '备份数据缺少 cardGroups' }
+      }
+      if (!Array.isArray(backupData.cards)) {
+        wx.hideLoading()
+        return { success: false, message: '备份数据缺少 cards' }
+      }
+
+      // 4. 导入到本地
       importLocalData(backupData)
 
-      // 更新备份时间戳
+      // 更新备份时间戳和哈希（使恢复后的数据被视为已同步）
+      const localHash = computeLocalHash()
+      wx.setStorageSync('lastBackupHash', localHash)
+      wx.setStorageSync('lastBackupTime', new Date().toISOString())
+      wx.setStorageSync('lastSyncHash', localHash)
       wx.setStorageSync('lastRestoreTime', new Date().toISOString())
 
       wx.hideLoading()
@@ -258,7 +285,7 @@ class SyncManager {
           name: 'backup_manager',
           data: { action: 'delete', backupId }
         })
-      } catch (err) {
+      } catch (err: any) {
         console.warn('[Sync] 云端删除备份失败', err)
       }
 
@@ -327,7 +354,7 @@ class SyncManager {
         }
       }
       return { success: false, errMsg: (res && res.error) || '获取备份信息失败' }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Sync] 获取备份信息失败', err)
       return { success: false, errMsg: (err as Error).message }
     }
@@ -385,7 +412,7 @@ class SyncManager {
     }
 
     // 本地哈希与云端哈希一致 → 已同步
-    if (cloudHash && localHash === cloudHash && lastSyncHash) {
+    if (cloudHash && localHash === cloudHash) {
       const syncTime = lastSyncTime || cloudBackupTime || lastLocalUpdate
       const syncTimeStr = syncTime ? this.formatBackupTime(new Date(syncTime).toISOString()) : ''
       return { type: 'synced', label: '已同步' + (syncTimeStr ? ' ' + syncTimeStr : '') }
@@ -429,7 +456,7 @@ class SyncManager {
         }
       }
       return { success: false, totalSize: 0, backupCount: 0 }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Sync] 获取云端存储信息失败', err)
       return { success: false, totalSize: 0, backupCount: 0 }
     }

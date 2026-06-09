@@ -2,18 +2,13 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
+const crypto = require('crypto')
 
 function calculateHash(data) {
   if (typeof data === 'string') {
-    let hash = 0
-    for (let i = 0; i < data.length; i++) {
-      const char = data.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
-      hash = hash & hash
-    }
-    return hash.toString(36)
+    return crypto.createHash('sha256').update(data).digest('hex')
   }
-  return '0'
+  return ''
 }
 
 exports.main = async (event, context) => {
@@ -84,33 +79,53 @@ exports.main = async (event, context) => {
       }
 
     } else if (action === 'create') {
-      // 全量覆盖备份：先删除旧备份再创建新备份，每个用户只保留一份
+      // 每个用户只保留一份备份：有则更新，无则新建（原子操作）
       const { data: existing } = await db.collection('backups')
         .where({ userId })
+        .orderBy('backupTime', 'asc')
         .limit(1)
         .get()
 
-      if (existing.length > 0) {
-        await db.collection('backups').doc(existing[0]._id).remove()
+      // 校验备份数据大小
+      const actualDataSize = JSON.stringify(backupData || {}).length
+      if (actualDataSize > 1024 * 1024) {
+        return { success: false, error: '备份数据过大，请减少卡片数量后重试' }
       }
 
-      const result = await db.collection('backups').add({
-        data: {
-          backupId,
-          userId,
-          appVersion: event.appVersion || 'unknown',
-          backupTime: new Date(),
-          dataSize: dataSize || 0,
-          description: description || '',
-          cardGroupsCount: cardGroupsCount || 0,
-          cardsCount: cardsCount || 0,
-          studyRecordsCount: studyRecordsCount || 0,
-          favoritesCount: favoritesCount || 0,
-          backupData: backupData || {}
-        }
-      })
-
-      return { success: true, _id: result._id, backupId }
+      if (existing.length > 0) {
+        // 更新现有备份（原子操作，避免先删后写数据丢失）
+        await db.collection('backups').doc(existing[0]._id).update({
+          data: {
+            backupData: backupData || {},
+            backupTime: new Date(),
+            dataSize: actualDataSize,
+            description: description || '',
+            cardGroupsCount: cardGroupsCount || 0,
+            cardsCount: cardsCount || 0,
+            studyRecordsCount: studyRecordsCount || 0,
+            favoritesCount: favoritesCount || 0
+          }
+        })
+        return { success: true, _id: existing[0]._id, backupId }
+      } else {
+        // 新建备份
+        const result = await db.collection('backups').add({
+          data: {
+            backupId,
+            userId,
+            appVersion: event.appVersion || 'unknown',
+            backupTime: new Date(),
+            dataSize: actualDataSize,
+            description: description || '',
+            cardGroupsCount: cardGroupsCount || 0,
+            cardsCount: cardsCount || 0,
+            studyRecordsCount: studyRecordsCount || 0,
+            favoritesCount: favoritesCount || 0,
+            backupData: backupData || {}
+          }
+        })
+        return { success: true, _id: result._id, backupId }
+      }
 
     } else if (action === 'get') {
       const { data } = await db.collection('backups')

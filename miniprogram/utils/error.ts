@@ -27,10 +27,25 @@ export function getErrorMessage(code: string): string {
   return ERROR_MESSAGES[code] || ERROR_MESSAGES['system/unknown']
 }
 
+export class AppError extends Error {
+  code: string
+  detail?: string
+  
+  constructor(code: string, message?: string, detail?: string) {
+    super(message || getErrorMessage(code))
+    this.code = code
+    this.detail = detail
+    this.name = 'AppError'
+  }
+}
+
 export function showErrorToast(error: Error | string | ErrorInfo): void {
   let message = ''
   
-  if (typeof error === 'string') {
+  if (error instanceof AppError) {
+    message = getErrorMessage(error.code)
+    if (error.detail) message += ` (${error.detail})`
+  } else if (typeof error === 'string') {
     message = getErrorMessage(error)
   } else if (error instanceof Error) {
     message = error.message || '系统错误'
@@ -54,7 +69,12 @@ export function showErrorModal(error: Error | string | ErrorInfo): void {
   let title = '出错了'
   let content = ''
   
-  if (typeof error === 'string') {
+  if (error instanceof AppError) {
+    content = getErrorMessage(error.code)
+    if (error.detail) {
+      content += `\n详情: ${error.detail}`
+    }
+  } else if (typeof error === 'string') {
     content = getErrorMessage(error)
   } else if (error instanceof Error) {
     content = error.message || '系统错误'
@@ -75,28 +95,17 @@ export function showErrorModal(error: Error | string | ErrorInfo): void {
   })
 }
 
-export class AppError extends Error {
-  code: string
-  detail?: string
-  
-  constructor(code: string, message?: string, detail?: string) {
-    super(message || getErrorMessage(code))
-    this.code = code
-    this.detail = detail
-    this.name = 'AppError'
-  }
-}
-
-export function wrapAsync<T>(fn: () => Promise<T>): Promise<T | null> {
-  return fn().catch((error: any) => {
-    console.error('[Error] Async operation failed:', error)
-    showErrorToast(error)
-    return null
-  })
+export function wrapAsync<T>(fn: () => Promise<T>): Promise<{ success: true; data: T } | { success: false }> {
+  return fn().then(data => ({ success: true as const, data }))
+    .catch((error: any) => {
+      console.error('[Error] Async operation failed:', error)
+      showErrorToast(error)
+      return { success: false as const }
+    })
 }
 
 export function validateParams(params: Record<string, any>, required: string[]): ErrorInfo | null {
-  const missing = required.filter(key => !params[key])
+  const missing = required.filter(key => params[key] === undefined)
   if (missing.length > 0) {
     return {
       code: 'param/missing',

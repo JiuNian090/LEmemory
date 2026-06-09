@@ -57,9 +57,12 @@ export function getPeriodRange(periodType: PeriodType, today: Date = new Date())
 export function getPreviousPeriodRange(start: string, end: string): { start: string; end: string } {
   const startDate = parseDateStr(start)
   const endDate = parseDateStr(end)
-  const lengthMs = endDate.getTime() - startDate.getTime() + DAY_MS
-  const prevEnd = new Date(startDate.getTime() - 1)
-  const prevStart = new Date(prevEnd.getTime() - lengthMs + 1)
+  // 使用日历计算天数差，避免 DST 问题
+  const dayDiff = Math.round((endDate.getTime() - startDate.getTime()) / DAY_MS) + 1
+  const prevEnd = new Date(startDate)
+  prevEnd.setDate(prevEnd.getDate() - 1)
+  const prevStart = new Date(prevEnd)
+  prevStart.setDate(prevStart.getDate() - dayDiff + 1)
   return { start: toDateStr(prevStart), end: toDateStr(prevEnd) }
 }
 
@@ -133,9 +136,11 @@ export function calculateLongestStreak(studyDateSet: Set<string>): number {
   let longest = 1
   let current = 1
   for (let i = 1; i < sorted.length; i++) {
-    const prev = parseDateStr(sorted[i - 1]).getTime()
-    const cur = parseDateStr(sorted[i]).getTime()
-    if (cur - prev === DAY_MS) {
+    // 改用日历比较，避免 DST 问题
+    const prevDate = parseDateStr(sorted[i - 1])
+    const curDate = parseDateStr(sorted[i])
+    prevDate.setDate(prevDate.getDate() + 1)
+    if (prevDate.toDateString() === curDate.toDateString()) {
       current++
       longest = Math.max(longest, current)
     } else {
@@ -173,7 +178,10 @@ export function calculateAchievementRate(
 export function formatDurationShort(seconds: number): string {
   if (seconds <= 0) return '0m'
   const hours = seconds / 3600
-  if (hours >= 1) return `${hours.toFixed(1)}h`
+  if (hours >= 1) {
+    const roundedHours = Math.round(hours * 10) / 10
+    return roundedHours === Math.floor(roundedHours) ? `${roundedHours}h` : `${roundedHours.toFixed(1)}h`
+  }
   const minutes = Math.floor(seconds / 60)
   if (minutes > 0) return `${minutes}m`
   return `${Math.floor(seconds)}s`

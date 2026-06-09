@@ -122,7 +122,7 @@ export async function syncUserProfile(): Promise<boolean> {
     }
 
     return changed
-  } catch (err) {
+  } catch (err: any) {
     console.warn('[UserSync] 同步用户资料失败', err)
     return false
   } finally {
@@ -163,7 +163,7 @@ async function downloadCloudAvatar(fileID: string): Promise<string | null> {
     cleanupOldAvatarCache(savedPath)
 
     return savedPath
-  } catch (err) {
+  } catch (err: any) {
     console.warn('[UserSync] 下载头像失败', err)
     return null
   }
@@ -192,7 +192,7 @@ export function cacheLocalAvatar(
     cleanupOldAvatarCache(savedPath)
 
     return savedPath
-  } catch (err) {
+  } catch (err: any) {
     console.warn('[UserSync] 缓存本地头像失败', err)
     return null
   }

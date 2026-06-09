@@ -92,7 +92,7 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
         cardGroups: formattedData
       })
       console.log('[StudyPage] 加载卡牌组成功', formattedData.length)
-    } catch (err) {
+    } catch (err: any) {
       console.error('[StudyPage] 加载卡牌组失败', err)
       // 不显示错误提示，静默失败
     } finally {
@@ -111,7 +111,7 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
       } else if (typeof time === 'string') {
         return formatDate(new Date(time))
       } else if (time) {
-        return formatDate(new Date())
+        return formatDate(new Date(time))
       }
       return ''
     } catch {
@@ -257,7 +257,7 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
     if (index === undefined || index === null) return
     this.setData({
       startX: e.touches[0].clientX,
-      swipeIndex: this.data.swipeIndex === index ? index : this.data.swipeIndex
+      swipeIndex: this.data.swipeIndex === index ? -1 : index
     })
   },
 
@@ -346,7 +346,7 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
       })
 
       console.log('[StudyPage] 删除卡牌组成功', groupId)
-    } catch (err) {
+    } catch (err: any) {
       console.error('[StudyPage] 删除卡牌组失败', err)
       wx.showToast({
         title: '删除失败',

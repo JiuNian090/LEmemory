@@ -61,7 +61,7 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
       this.setData({
         userInfo: userInfo
       })
-    } catch (err) {
+    } catch (err: any) {
       console.error('[LoginPage] 读取用户信息失败', err)
     }
   },
@@ -76,11 +76,10 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
         const latest = savedAccounts[0]
         this.setData({
           'loginForm.username': latest.username,
-          'loginForm.password': latest.password,
           'loginForm.rememberPassword': true
         })
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[LoginPage] 加载保存的凭据失败', err)
     }
   },
@@ -155,7 +154,8 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
       return false
     }
 
-    if (username.length < 3 || username.length > 20) {
+    const trimmed = username.trim()
+    if (trimmed.length < 3 || trimmed.length > 20) {
       wx.showToast({
         title: '用户名长度为3-20个字符',
         icon: 'none'
@@ -188,7 +188,8 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
       return false
     }
 
-    if (username.length < 3 || username.length > 20) {
+    const trimmed = username.trim()
+    if (trimmed.length < 3 || trimmed.length > 20) {
       wx.showToast({
         title: '用户名长度为3-20个字符',
         icon: 'none'
@@ -260,7 +261,7 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
           password: loginForm.password
         }
       })
-      const loginResult = result as { success: boolean; user?: any; error?: string }
+      const loginResult = result as { success: boolean; user?: any; error?: string; sessionToken?: string }
 
       if (loginResult.success) {
         if (loginForm.rememberPassword) {
@@ -271,7 +272,7 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
           )
           const accountEntry = {
             username,
-            password: loginForm.password,
+            sessionToken: loginResult.sessionToken,
             nickName: loginResult.user?.nickName || username,
             avatarUrl: loginResult.user?.avatarUrl || '',
             lastLoginTime: Date.now()
@@ -314,7 +315,7 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
           icon: 'none'
         })
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[LoginPage] 登录失败', err)
       wx.showToast({
         title: '网络错误，请稍后重试',
@@ -350,6 +351,24 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
       const registerResult = result as { success: boolean; user?: any; error?: string }
 
       if (registerResult.success) {
+        // 更新已保存账号列表
+        const username = registerForm.username.trim()
+        const savedAccounts = wx.getStorageSync('savedAccounts') || []
+        const existingIdx = savedAccounts.findIndex((a: any) => a.username === username)
+        const accountEntry = {
+          username,
+          lastLoginTime: Date.now(),
+          nickName: registerForm.nickName.trim() || username,
+          avatarUrl: registerForm.avatarUrl.trim() || ''
+        }
+        if (existingIdx >= 0) {
+          savedAccounts[existingIdx] = accountEntry
+        } else {
+          savedAccounts.unshift(accountEntry)
+        }
+        savedAccounts.sort((a: any, b: any) => b.lastLoginTime - a.lastLoginTime)
+        wx.setStorageSync('savedAccounts', savedAccounts)
+
         wx.showToast({
           title: '注册成功，请登录',
           icon: 'success',
@@ -359,7 +378,7 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
         setTimeout(() => {
           this.setData({
             mode: 'login',
-            'loginForm.username': registerForm.username.trim(),
+            'loginForm.username': username,
             'loginForm.password': '',
             'registerForm.password': '',
             'registerForm.confirmPassword': ''
@@ -371,7 +390,7 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
           icon: 'none'
         })
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[LoginPage] 注册失败', err)
       wx.showToast({
         title: '网络错误，请稍后重试',
@@ -395,6 +414,12 @@ Page<LoginPageData, WechatMiniprogram.IAnyObject>({
           this.setData({
             'registerForm.avatarUrl': res.tempFilePaths[0]
           })
+        }
+      },
+      fail: (err: any) => {
+        if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+          console.error('[LoginPage] 选择图片失败', err)
+          wx.showToast({ title: '选择图片失败', icon: 'none' })
         }
       }
     })

@@ -7,7 +7,7 @@ export function getLocalStorageData(key: string): any[] {
   try {
     const data = getEncryptedStorage(key)
     return data || []
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DB] 读取本地存储失败', err)
     return []
   }
@@ -16,7 +16,7 @@ export function getLocalStorageData(key: string): any[] {
 export function setLocalStorageData(key: string, data: any[]): boolean {
   try {
     return setEncryptedStorage(key, data)
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DB] 保存本地存储失败', err)
     return false
   }
@@ -41,11 +41,13 @@ export function computeLocalHash(): string {
     + JSON.stringify(studyRecords) + JSON.stringify(favorites)
     + JSON.stringify(studyDaily)
 
-  let hash = 0
+  // FNV-1a 64-bit（比 DJB2 32-bit 更抗碰撞）
+  const FNV_OFFSET = 0xcbf29ce484222325n
+  const FNV_PRIME = 0x100000001b3n
+  let hash = FNV_OFFSET
   for (let i = 0; i < combined.length; i++) {
-    const char = combined.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
-    hash = hash & hash
+    hash ^= BigInt(combined.charCodeAt(i))
+    hash = (hash * FNV_PRIME) & 0xffffffffffffffffn
   }
   return hash.toString(36)
 }
@@ -64,7 +66,7 @@ const DAILY_STUDY_KEY = 'study_daily'
 export function getDailyStudyMap(): DailyStudyMap {
   try {
     return getEncryptedStorage(DAILY_STUDY_KEY) || {}
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DB] 读取每日学习时长失败', err)
     return {}
   }
@@ -73,7 +75,7 @@ export function getDailyStudyMap(): DailyStudyMap {
 export function setDailyStudyMap(data: DailyStudyMap): boolean {
   try {
     return setEncryptedStorage(DAILY_STUDY_KEY, data)
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DB] 保存每日学习时长失败', err)
     return false
   }
@@ -87,38 +89,68 @@ export function addDailyStudyDuration(date: string, groupId: string, duration: n
   }
   data[date].totalDuration += duration
   data[date].groups[groupId] = (data[date].groups[groupId] || 0) + duration
-  setDailyStudyMap(data)
+  if (!setDailyStudyMap(data)) {
+    throw new Error('存储写入失败，请检查存储空间')
+  }
   return data
 }
 
 // ==================== 本地集合类 ====================
 
+/** 写入互斥锁（串行化读-改-写操作，防止并发竞态） */
+let writeQueue: Promise<any> = Promise.resolve()
+
+function enqueueWrite<T>(fn: () => T): Promise<T> {
+  const result = writeQueue.then(fn)
+  // 链式更新 writeQueue，确保后续操作等待当前操作完成
+  writeQueue = result.catch(() => {})
+  return result
+}
+
 class LocalCollection {
   key: string
+  collectionName: string
+  private orderField: string = ''
+  private orderDir: number = 1  // 1 = asc, -1 = desc
 
-  constructor(key: string) {
+  constructor(key: string, collectionName: string) {
     this.key = key
+    this.collectionName = collectionName
   }
 
   add({ data }: { data: any }): Promise<{ _id: string }> {
-    const items = getLocalStorageData(this.key)
-    const newItem = {
-      ...data,
-      _id: data._id || generateId(),
-      createTime: data.createTime || new Date(),
-      updateTime: new Date()
-    }
-    items.push(newItem)
-    setLocalStorageData(this.key, items)
-    return Promise.resolve({ _id: newItem._id })
+    return enqueueWrite(() => {
+      const items = getLocalStorageData(this.key)
+      const newItem = {
+        ...data,
+        _id: data._id || generateId(),
+        createTime: data.createTime || new Date(),
+        updateTime: new Date()
+      }
+      items.push(newItem)
+      if (!setLocalStorageData(this.key, items)) {
+        throw new Error('存储写入失败，请检查存储空间')
+      }
+      return { _id: newItem._id }
+    })
   }
 
   get(): Promise<{ data: any[] }> {
     const items = getLocalStorageData(this.key)
+    if (this.orderField) {
+      items.sort((a, b) => {
+        const av = a[this.orderField], bv = b[this.orderField]
+        if (av < bv) return -1 * this.orderDir
+        if (av > bv) return 1 * this.orderDir
+        return 0
+      })
+    }
     return Promise.resolve({ data: items })
   }
 
-  orderBy(_field: string, _order: string): LocalCollection {
+  orderBy(field: string, order: string): LocalCollection {
+    this.orderField = field
+    this.orderDir = order === 'desc' ? -1 : 1
     return this
   }
 
@@ -127,13 +159,15 @@ class LocalCollection {
   }
 
   doc(id: string): LocalDoc {
-    return new LocalDoc(this.key, id)
+    return new LocalDoc(this.key, id, this.collectionName)
   }
 }
 
 class LocalQuery {
   key: string
   query: any
+  private orderField: string = ''
+  private orderDir: number = 1
 
   constructor(key: string, query: any) {
     this.key = key
@@ -148,10 +182,20 @@ class LocalQuery {
       }
       return true
     })
+    if (this.orderField) {
+      filtered.sort((a, b) => {
+        const av = a[this.orderField], bv = b[this.orderField]
+        if (av < bv) return -1 * this.orderDir
+        if (av > bv) return 1 * this.orderDir
+        return 0
+      })
+    }
     return Promise.resolve({ data: filtered })
   }
 
-  orderBy(_field: string, _order: string): LocalQuery {
+  orderBy(field: string, order: string): LocalQuery {
+    this.orderField = field
+    this.orderDir = order === 'desc' ? -1 : 1
     return this
   }
 }
@@ -159,67 +203,87 @@ class LocalQuery {
 class LocalDoc {
   key: string
   id: string
+  collectionName: string
 
-  constructor(key: string, id: string) {
+  constructor(key: string, id: string, collectionName: string) {
     this.key = key
     this.id = id
+    this.collectionName = collectionName
+  }
+
+  private getMatchField(): string {
+    switch (this.collectionName) {
+      case 'cards': return 'cardId'
+      case 'cardGroups': return 'groupId'
+      case 'favorites': return 'favoriteId'
+      case 'studyRecords': return 'recordId'
+      default: return '_id'
+    }
   }
 
   update({ data }: { data: any }): Promise<any> {
-    const items = getLocalStorageData(this.key)
-    const index = items.findIndex(
-      item => item._id === this.id || item.groupId === this.id || item.cardId === this.id || item.recordId === this.id || item.favoriteId === this.id
-    )
-    if (index !== -1) {
-      items[index] = { ...items[index], ...data, updateTime: new Date() }
-      setLocalStorageData(this.key, items)
-    }
-    return Promise.resolve({})
+    return enqueueWrite(() => {
+      const items = getLocalStorageData(this.key)
+      const matchField = this.getMatchField()
+      const index = items.findIndex(item => item[matchField] === this.id)
+      if (index !== -1) {
+        items[index] = { ...items[index], ...data, updateTime: new Date() }
+        if (!setLocalStorageData(this.key, items)) {
+          throw new Error('存储写入失败，请检查存储空间')
+        }
+      }
+      return {}
+    })
   }
 
   remove(): Promise<any> {
-    const items = getLocalStorageData(this.key)
-    const filtered = items.filter(
-      item => item._id !== this.id && item.groupId !== this.id && item.cardId !== this.id && item.recordId !== this.id && item.favoriteId !== this.id
-    )
-    setLocalStorageData(this.key, filtered)
-    return Promise.resolve({})
+    return enqueueWrite(() => {
+      const items = getLocalStorageData(this.key)
+      const matchField = this.getMatchField()
+      const filtered = items.filter(item => item[matchField] !== this.id)
+      if (!setLocalStorageData(this.key, filtered)) {
+        throw new Error('存储写入失败，请检查存储空间')
+      }
+      return {}
+    })
   }
 
   get(): Promise<{ data: any }> {
     const items = getLocalStorageData(this.key)
-    const item = items.find(
-      item => item._id === this.id || item.groupId === this.id || item.cardId === this.id || item.recordId === this.id || item.favoriteId === this.id
-    )
+    const matchField = this.getMatchField()
+    const item = items.find(item => item[matchField] === this.id)
     return Promise.resolve({ data: item || null })
   }
 
   set(options: { data: any }): Promise<any> {
-    const items = getLocalStorageData(this.key)
-    const index = items.findIndex(
-      item => item._id === this.id || item.groupId === this.id || item.cardId === this.id || item.recordId === this.id || item.favoriteId === this.id
-    )
-    if (index !== -1) {
-      items[index] = { ...items[index], ...options.data, updateTime: new Date() }
-    } else {
-      const newItem = { ...options.data, _id: this.id, updateTime: new Date() }
-      items.push(newItem)
-    }
-    setLocalStorageData(this.key, items)
-    return Promise.resolve({})
+    return enqueueWrite(() => {
+      const items = getLocalStorageData(this.key)
+      const matchField = this.getMatchField()
+      const index = items.findIndex(item => item[matchField] === this.id)
+      if (index !== -1) {
+        items[index] = { ...items[index], ...options.data, updateTime: new Date() }
+      } else {
+        const newItem = { ...options.data, _id: this.id, createTime: new Date(), updateTime: new Date() }
+        items.push(newItem)
+      }
+      if (!setLocalStorageData(this.key, items)) {
+        throw new Error('存储写入失败，请检查存储空间')
+      }
+      return {}
+    })
   }
 }
 
 // ==================== 导出集合实例（纯本地） ====================
 
-export const cardGroupCollection = new LocalCollection('card_groups')
-export const cardCollection = new LocalCollection('cards')
-export const studyRecordCollection = new LocalCollection('study_records')
-export const favoriteCollection = new LocalCollection('favorites')
+export const cardGroupCollection = new LocalCollection('card_groups', 'cardGroups')
+export const cardCollection = new LocalCollection('cards', 'cards')
+export const studyRecordCollection = new LocalCollection('study_records', 'studyRecords')
+export const favoriteCollection = new LocalCollection('favorites', 'favorites')
 
 // 兼容旧引用
-export const userCollection = new LocalCollection('users')
-export const backupCollection = new LocalCollection('backups')
+export const userCollection = new LocalCollection('users', 'users')
+export const backupCollection = new LocalCollection('backups', 'backups')
 
 // ==================== 统一删除卡牌组 ====================
 
@@ -237,8 +301,10 @@ export async function deleteCardGroup(groupId: string): Promise<void> {
     try {
       const items = getLocalStorageData(localKey)
       const filtered = items.filter((item: any) => item.groupId !== groupId)
-      setLocalStorageData(localKey, filtered)
-    } catch (err) {
+      if (!setLocalStorageData(localKey, filtered)) {
+        throw new Error(`本地删除 ${localKey} 写入失败`)
+      }
+    } catch (err: any) {
       const msg = `本地删除 ${localKey} 失败`
       console.error(`[DB] ${msg}`, err)
       errors.push(msg)
@@ -257,8 +323,12 @@ export async function deleteCardGroup(groupId: string): Promise<void> {
         }
       }
     }
-    setDailyStudyMap(daily)
-  } catch (err) {
+    if (!setDailyStudyMap(daily)) {
+      const msg = '清理每日学习时长写入失败'
+      console.error(`[DB] ${msg}`)
+      errors.push(msg)
+    }
+  } catch (err: any) {
     const msg = '清理每日学习时长失败'
     console.error(`[DB] ${msg}`, err)
     errors.push(msg)
@@ -280,7 +350,7 @@ export async function getUserId(): Promise<string> {
       return res.userId
     }
     return 'local_user'
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DB] 获取用户ID失败', err)
     return 'local_user'
   }

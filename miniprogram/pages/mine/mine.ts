@@ -29,6 +29,8 @@ Page<MinePageData, WechatMiniprogram.IAnyObject>({
       if (changed) {
         this.loadUserInfo()
       }
+    }).catch((err) => {
+      console.error('[Mine] 同步用户信息失败', err)
     })
   },
 
@@ -45,7 +47,7 @@ Page<MinePageData, WechatMiniprogram.IAnyObject>({
           avatarDisplayUrl: getBestAvatarUrl(userInfo)
         })
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[MinePage] 读取缓存失败', err)
     }
   },
@@ -75,7 +77,11 @@ Page<MinePageData, WechatMiniprogram.IAnyObject>({
       confirmColor: '#f56c6c',
       success: async (res) => {
         if (res.confirm) {
-          await syncManager.onLogout()
+          try {
+            await syncManager.onLogout()
+          } catch (err: any) {
+            console.error('[Mine] 退出登录失败', err)
+          }
           this.setData({ userInfo: null })
 
           wx.showToast({
@@ -154,7 +160,7 @@ Page<MinePageData, WechatMiniprogram.IAnyObject>({
       const { urlLink } = res.result
       await wx.setClipboardData({ data: urlLink })
       wx.showToast({ title: '小程序链接已复制', icon: 'success' })
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Mine] 生成分享链接失败', err)
       wx.showToast({ title: '生成失败，请使用右上角转发', icon: 'none' })
     } finally {

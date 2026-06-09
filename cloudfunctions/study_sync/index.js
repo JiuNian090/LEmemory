@@ -12,7 +12,13 @@ const _ = db.command
  *   每个 (username, date, groupId) 唯一，通过 _.inc() 原子累加
  */
 exports.main = async (event, context) => {
-  const { action, username, groupId, duration, date, startDate, endDate } = event
+  const { action, username, groupId, duration, date, startDate, endDate, dateStr } = event
+
+  const wxContext = cloud.getWXContext()
+  const { OPENID: _openid } = wxContext
+  if (!_openid) {
+    return { success: false, error: '未登录' }
+  }
 
   if (!username) {
     return { success: false, error: '缺少用户标识' }
@@ -22,22 +28,23 @@ exports.main = async (event, context) => {
     // === 原子累加每日学习时长（退出学习时调用） ===
     if (action === 'syncDaily') {
       const existing = await db.collection('study_daily')
-        .where({ username, date, groupId }).get()
+        .where({ _openid, username, date, groupId }).get()
 
       if (existing.data.length > 0) {
         await db.collection('study_daily').doc(existing.data[0]._id).update({
           data: {
-            totalDuration: _.inc(duration || 0),
+            totalDuration: _.inc(Math.max(0, duration || 0)),
             updateTime: new Date()
           }
         })
       } else {
         await db.collection('study_daily').add({
           data: {
+            _openid,
             username,
             date,
             groupId: groupId || '',
-            totalDuration: duration || 0,
+            totalDuration: Math.max(0, duration || 0),
             updateTime: new Date()
           }
         })
@@ -47,8 +54,8 @@ exports.main = async (event, context) => {
 
     // === 获取今日学习总时长 ===
     if (action === 'getTodayTotal') {
-      const today = new Date().toISOString().split('T')[0]
-      const query = { username, date: today }
+      const today = dateStr || new Date().toISOString().split('T')[0]
+      const query = { _openid, username, date: today }
       if (groupId) query.groupId = groupId
 
       const { data } = await db.collection('study_daily')
@@ -60,7 +67,7 @@ exports.main = async (event, context) => {
 
     // === 获取日期范围内的每日学习数据（用于统计页） ===
     if (action === 'getDailyData') {
-      const query = { username }
+      const query = { _openid, username }
       if (startDate || endDate) {
         const dateFilter = {}
         if (startDate) dateFilter.$gte = startDate
@@ -81,6 +88,7 @@ exports.main = async (event, context) => {
     if (action === 'save') {
       const result = await db.collection('study_records').add({
         data: {
+          _openid,
           username,
           groupId: groupId || '',
           studyDuration: duration || 0,
@@ -93,7 +101,7 @@ exports.main = async (event, context) => {
 
     // === （保留）旧版获取记录 - 仅用于旧数据兼容 ===
     if (action === 'getRecords') {
-      const query = { username }
+      const query = { _openid, username }
       if (startDate || endDate) {
         const dateFilter = {}
         if (startDate) dateFilter.$gte = new Date(startDate)

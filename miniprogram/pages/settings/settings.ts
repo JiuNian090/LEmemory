@@ -70,7 +70,7 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
           avatarDisplayUrl: getBestAvatarUrl(userInfo)
         })
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Settings] 读取用户信息失败', err)
     }
   },
@@ -79,7 +79,7 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
     try {
       const savedAccounts = wx.getStorageSync('savedAccounts') || []
       this.setData({ savedAccounts })
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[Settings] 加载已保存账号失败', err)
     }
   },
@@ -93,6 +93,12 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
       success: (res) => {
         const tempFilePath = res.tempFiles[0].tempFilePath
         this.updateAvatar(tempFilePath)
+      },
+      fail: (err: any) => {
+        if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+          console.error('[Settings] 选择图片失败', err)
+          wx.showToast({ title: '选择图片失败', icon: 'none' })
+        }
       }
     })
   },
@@ -104,7 +110,7 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
     let fileHash = ''
     try {
       fileHash = await computeFileHashFromPath(filePath)
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[Settings] 计算头像哈希失败，不影响上传', err)
     }
 
@@ -148,7 +154,7 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
       } else {
         console.warn('[Settings] 云函数返回失败，降级本地保存', updateResult.error)
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[Settings] 头像上传异常，降级本地保存', err)
     }
 
@@ -228,7 +234,7 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
       } else {
         console.warn('[Settings] 云函数返回失败，降级本地保存', updateResult.error)
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[Settings] 云函数调用异常，降级本地保存', err)
     }
 
@@ -324,7 +330,7 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
       } else {
         wx.showToast({ title: loginResult.error || '切换失败', icon: 'none' })
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Settings] 切换账号失败', err)
       wx.showToast({ title: '切换失败，请稍后重试', icon: 'none' })
     }
@@ -336,20 +342,24 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
       const idx = savedAccounts.findIndex((a: any) => a.username === username)
       if (idx >= 0) {
         savedAccounts[idx].lastLoginTime = Date.now()
-        savedAccounts[idx].nickName = user.nickName || savedAccounts[idx].nickName
-        savedAccounts[idx].avatarUrl = user.avatarUrl || savedAccounts[idx].avatarUrl
+        savedAccounts[idx].nickName = user.nickName ?? savedAccounts[idx].nickName
+        savedAccounts[idx].avatarUrl = user.avatarUrl ?? savedAccounts[idx].avatarUrl
         savedAccounts.sort((a: any, b: any) => b.lastLoginTime - a.lastLoginTime)
         wx.setStorageSync('savedAccounts', savedAccounts)
         this.setData({ savedAccounts })
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[Settings] 更新账号时间戳失败', err)
     }
   },
 
   async confirmSwitchAccount() {
     this.setData({ showSwitchSheet: false })
-    await syncManager.onLogout()
+    try {
+      await syncManager.onLogout()
+    } catch (err: any) {
+      console.error('[Settings] 退出登录失败', err)
+    }
     wx.reLaunch({
       url: '/pages/login/login?action=new'
     })
@@ -400,7 +410,7 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
           try {
             wx.removeStorageSync('userInfo')
             wx.removeStorageSync('rememberedAccount')
-          } catch (err) {
+          } catch (err: any) {
             console.warn('[Settings] 清除缓存失败', err)
           }
           wx.reLaunch({
@@ -410,7 +420,7 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
       } else {
         wx.showToast({ title: updateResult.error || '修改失败', icon: 'none' })
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Settings] 修改密码失败', err)
       wx.showToast({ title: '修改失败，请稍后重试', icon: 'none' })
     } finally {
