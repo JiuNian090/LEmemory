@@ -11,6 +11,28 @@ export interface ChangelogItem {
 
 export const changelogData: ChangelogItem[] = [
   {
+    version: '1.3.0',
+    date: '2026-06-09',
+    changes: [
+      {
+        type: '🎉 新增',
+        items: [
+          '分享链接复制功能',
+          '云端备份管理功能'
+        ]
+      },
+      {
+        type: '🏗️ 重构',
+        items: [
+          '重构分享功能，统一分享入口',
+          '重构用户ID获取逻辑',
+          '完善本地数据兼容与学习记录同步逻辑',
+          '完成项目多轮优化与功能完善'
+        ]
+      }
+    ]
+  },
+  {
     version: '1.2.5',
     date: '2026-06-09',
     changes: [
