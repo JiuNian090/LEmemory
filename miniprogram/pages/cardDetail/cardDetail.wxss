@@ -432,32 +432,6 @@ page {
   color: var(--text-primary);
 }
 
-.share-link-btn {
-  background: var(--card-bg);
-  border: 2rpx solid rgba(99, 102, 241, 0.3);
-  border-radius: 20rpx;
-  padding: 24rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12rpx;
-  box-shadow: var(--shadow);
-}
-
-.share-link-btn:active {
-  background: rgba(99, 102, 241, 0.08);
-}
-
-.share-link-icon {
-  font-size: 32rpx;
-}
-
-.share-link-text {
-  font-size: 26rpx;
-  color: #6366f1;
-  font-weight: 500;
-}
-
 .delete-group-btn {
   background: var(--card-bg);
   border: 2rpx solid rgba(248, 113, 113, 0.3);

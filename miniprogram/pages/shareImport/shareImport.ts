@@ -120,9 +120,6 @@ Page<ShareImportPageData, WechatMiniprogram.IAnyObject>({
     })
   },
 
-  /**
-   * 从文件导入卡牌（类似 cardDetail 的 importCards）
-   */
   importFromFile() {
     wx.chooseMessageFile({
       count: 1,

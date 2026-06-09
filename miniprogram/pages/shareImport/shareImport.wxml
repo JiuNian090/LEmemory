@@ -26,7 +26,7 @@
         <text class="hub-option-icon">📋</text>
         <view class="hub-option-texts">
           <text class="hub-option-title">从剪贴板导入</text>
-          <text class="hub-option-desc">粘贴卡牌 JSON 数据导入</text>
+          <text class="hub-option-desc">粘贴卡牌 JSON 或分享码导入</text>
         </view>
         <text class="hub-option-arrow">›</text>
       </view>
