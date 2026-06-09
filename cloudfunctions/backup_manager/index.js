@@ -37,13 +37,15 @@ exports.main = async (event, context) => {
       const latest = data[0]
       const rawData = latest.backupData || {}
 
-      // 只对数据内容哈希（与前端 computeLocalHash 一致）
+      // 对数据内容哈希（与前端 computeLocalHash 一致）
       const cardGroups = rawData.cardGroups || []
       const cards = rawData.cards || []
       const studyRecords = rawData.studyRecords || []
       const favorites = rawData.favorites || []
+      const studyDaily = rawData.studyDaily || {}
       const combined = JSON.stringify(cardGroups) + JSON.stringify(cards)
         + JSON.stringify(studyRecords) + JSON.stringify(favorites)
+        + JSON.stringify(studyDaily)
       const backupHash = calculateHash(combined)
 
       return {
@@ -70,6 +72,7 @@ exports.main = async (event, context) => {
         success: true,
         data: data.map(item => ({
           backupId: item.backupId,
+          userId: item.userId,
           backupTime: item.backupTime,
           dataSize: item.dataSize,
           description: item.description,
@@ -123,6 +126,7 @@ exports.main = async (event, context) => {
         success: true,
         data: {
           backupId: data[0].backupId,
+          userId: data[0].userId,
           backupTime: data[0].backupTime,
           dataSize: data[0].dataSize,
           description: data[0].description,
@@ -163,6 +167,10 @@ exports.main = async (event, context) => {
       }
 
       return { success: true }
+
+    } else if (action === 'getUserId') {
+      // 无副作用地获取当前用户的 OPENID
+      return { success: true, userId: wxContext.OPENID }
     }
 
     return { success: false, error: '未知操作' }

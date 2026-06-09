@@ -271,8 +271,15 @@ export async function deleteCardGroup(groupId: string): Promise<void> {
 
 export async function getUserId(): Promise<string> {
   try {
-    const { result } = await wx.cloud.callFunction({ name: 'user_login' })
-    return (result as any).openid
+    const { result } = await wx.cloud.callFunction({
+      name: 'backup_manager',
+      data: { action: 'getUserId' }
+    })
+    const res = result as { success: boolean; userId?: string }
+    if (res.success && res.userId) {
+      return res.userId
+    }
+    return 'local_user'
   } catch (err) {
     console.error('[DB] 获取用户ID失败', err)
     return 'local_user'

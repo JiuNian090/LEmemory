@@ -58,6 +58,7 @@ class SyncManager {
       const dataSize = dataJson.length
 
       const backupId = generateId()
+      let cloudSuccess = false
 
       // 上传到云端备份集合
       try {
@@ -77,15 +78,16 @@ class SyncManager {
           }
         })
         const createResult = result as { success: boolean; error?: string }
-        if (!createResult.success) {
-          wx.hideLoading()
-          return { success: false, message: createResult.error || '云端备份失败' }
+        if (createResult.success) {
+          cloudSuccess = true
+        } else {
+          console.warn('[Sync] 云端备份返回失败:', createResult.error)
         }
       } catch (err) {
-        console.warn('[Sync] 云端备份失败，降级本地', err)
+        console.warn('[Sync] 云端备份网络失败', err)
       }
 
-      // 本地也存一份副本
+      // 本地也存一份副本（无论云端是否成功）
       const backups = getLocalStorageData(BACKUP_STORAGE_KEY)
       backups.push({
         backupId,
@@ -108,7 +110,11 @@ class SyncManager {
 
       wx.hideLoading()
 
-      return { success: true, message: '备份成功', backupId }
+      if (cloudSuccess) {
+        return { success: true, message: '备份成功（云端+本地）', backupId }
+      } else {
+        return { success: true, message: '备份成功（仅本地，云端备份失败）', backupId }
+      }
 
     } catch (error) {
       wx.hideLoading()
@@ -187,6 +193,7 @@ class SyncManager {
       wx.showLoading({ title: '恢复中...' })
 
       let backupData: BackupData | null = null
+      let source = ''
 
       // 1. 从云端获取备份数据
       try {
@@ -197,6 +204,7 @@ class SyncManager {
         const getResult = result as { success: boolean; data?: any; error?: string }
         if (getResult.success && getResult.data) {
           backupData = getResult.data.backupData as BackupData
+          source = '云端'
         }
       } catch (err) {
         console.warn('[Sync] 云端获取备份失败，尝试本地', err)
@@ -210,12 +218,13 @@ class SyncManager {
         )
         if (found) {
           backupData = found.backupData as BackupData
+          source = '本地缓存'
         }
       }
 
       if (!backupData) {
         wx.hideLoading()
-        return { success: false, message: '备份不存在' }
+        return { success: false, message: '备份不存在（云端和本地均未找到）' }
       }
 
       // 3. 导入到本地
@@ -226,7 +235,7 @@ class SyncManager {
 
       wx.hideLoading()
 
-      return { success: true, message: '恢复成功' }
+      return { success: true, message: '恢复成功（来源：' + source + '）' }
 
     } catch (error) {
       wx.hideLoading()
