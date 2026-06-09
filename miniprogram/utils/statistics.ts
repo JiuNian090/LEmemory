@@ -187,21 +187,27 @@ function buildResult(
     groupPieData.forEach(s => { s.percentage = (s.value / totalDuration) * 100 })
   }
 
-  const currentStreak = calculateStreak(dateSet, new Date())
-  const longestStreak = calculateLongestStreak(dateSet)
-
   const goalSeconds = dailyGoalMinutes * 60
-  let achievedDays = 0
+  // 筛选出达到当日目标的日期（"打卡成功"的日期）
+  const qualifiedDateSet = new Set<string>()
   dateSet.forEach(d => {
-    if ((dailyMap.get(d) || 0) >= goalSeconds) achievedDays++
+    if ((dailyMap.get(d) || 0) >= goalSeconds) {
+      qualifiedDateSet.add(d)
+    }
   })
+
+  // 连续打卡/最长连续使用"达标日期"计算
+  const qualifiedStreak = calculateStreak(qualifiedDateSet, new Date())
+  const qualifiedLongest = calculateLongestStreak(qualifiedDateSet)
+
+  const achievedDays = qualifiedDateSet.size
   const achievementRate = dateSet.size > 0
     ? Math.round((achievedDays / dateSet.size) * 100)
     : 0
 
   return {
     totalDuration,
-    studyDays: dateSet.size,
+    studyDays: qualifiedDateSet.size,
     cardCount: cards.length,
     groupCount: groups.length,
     previousDuration: prevDuration,
@@ -211,8 +217,8 @@ function buildResult(
     dailyGoalMinutes,
     achievedDays,
     achievementRate,
-    currentStreak,
-    longestStreak,
+    currentStreak: qualifiedStreak,
+    longestStreak: qualifiedLongest,
     trendData,
     monthlyData,
     heatmapData,

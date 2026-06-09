@@ -104,14 +104,30 @@
   justify-content: space-between;
   align-items: center;
   margin-top: 20rpx;
-  padding: 20rpx 24rpx;
-  background: rgba(255, 255, 255, 0.15);
+  padding: 0;
   border-radius: 16rpx;
   font-size: 24rpx;
   color: #ffffff;
 }
 
+.goal-picker {
+  width: 100%;
+}
+
+.goal-picker-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 16rpx;
+}
+
 .goal-setting:active {
+  background: transparent;
+}
+
+.goal-picker-inner:active {
   background: rgba(255, 255, 255, 0.25);
 }
 

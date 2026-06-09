@@ -55,7 +55,7 @@
         <view class="overview-grid">
           <view class="overview-cell">
             <text class="cell-value">{{studyDays}}</text>
-            <text class="cell-label">学习天数</text>
+            <text class="cell-label">达标天数</text>
           </view>
           <view class="overview-cell">
             <text class="cell-value">{{currentStreak}} 🔥</text>
@@ -70,9 +70,13 @@
             <text class="cell-label">卡牌组数</text>
           </view>
         </view>
-        <view class="goal-setting" bindtap="onSetGoalTap">
-          <text>每日目标：{{dailyGoalMinutes}} 分钟</text>
-          <text class="goal-edit">点击修改</text>
+        <view class="goal-setting">
+          <picker mode="multiSelector" range="{{goalPickerRange}}" value="{{goalPickerValue}}" bindchange="onGoalPickerChange" class="goal-picker">
+            <view class="goal-picker-inner">
+              <text>每日目标：{{dailyGoalMinutes}} 分钟</text>
+              <text class="goal-edit">点击修改</text>
+            </view>
+          </picker>
         </view>
       </view>
     </view>
@@ -167,4 +171,6 @@
       </view>
     </view>
   </view>
+
+  <!-- 目标设置弹窗 -->
 </view>

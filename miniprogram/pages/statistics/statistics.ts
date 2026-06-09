@@ -48,6 +48,8 @@ interface StatisticsPageData {
     percentage: number
     color: string
   }>
+  goalPickerValue: number[]
+  goalPickerRange: string[][]
 }
 
 const DEFAULT_DAILY_GOAL = 30
@@ -68,13 +70,23 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
     groupCount: 0,
     dailyGoalMinutes: DEFAULT_DAILY_GOAL,
     heatmapYear: new Date().getFullYear(),
-    groupPieData: []
+    groupPieData: [],
+    goalPickerValue: [0, 6],
+    goalPickerRange: [
+      ['0小时','1小时','2小时','3小时','4小时','5小时','6小时','7小时','8小时'],
+      ['0分','5分','10分','15分','20分','25分','30分','35分','40分','45分','50分','55分']
+    ]
   },
 
   onLoad() {
     enableShareMenu()
     const goal = this.loadGoalFromStorage()
-    this.setData({ dailyGoalMinutes: goal })
+    const hours = Math.min(Math.floor(goal / 60), 8)
+    const minuteIndex = Math.round((goal % 60) / 5)
+    this.setData({
+      dailyGoalMinutes: goal,
+      goalPickerValue: [hours, minuteIndex]
+    })
 
     // 默认显示本月
     const range = getPeriodRange('month')
@@ -323,25 +335,17 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
     this.loadStatistics(true)
   },
 
-  onSetGoalTap() {
-    wx.showModal({
-      title: '设置每日学习目标',
-      editable: true,
-      placeholderText: '请输入分钟数（1-480）',
-      content: String(this.data.dailyGoalMinutes),
-      success: (res) => {
-        if (!res.confirm || !res.content) return
-        const n = parseInt(res.content, 10)
-        if (isNaN(n) || n < 1 || n > 480) {
-          wx.showToast({ title: '请输入 1-480', icon: 'none' })
-          return
-        }
-        this.saveGoalToStorage(n)
-        this.setData({ dailyGoalMinutes: n })
-        this.lastInput = null
-        this.loadStatistics(true)
-      }
-    })
+  /**
+   * 目标选择器变更时直接保存
+   */
+  onGoalPickerChange(e: WechatMiniprogram.TouchEvent) {
+    const values = (e.detail as any).value as number[]
+    const totalMinutes = values[0] * 60 + values[1] * 5
+    if (totalMinutes < 1) return
+    this.saveGoalToStorage(totalMinutes)
+    this.setData({ dailyGoalMinutes: totalMinutes })
+    this.lastInput = null
+    this.loadStatistics(true)
   },
 
   loadGoalFromStorage(): number {
