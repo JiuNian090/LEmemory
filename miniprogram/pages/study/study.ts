@@ -240,6 +240,9 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
   goToDetail(e: WechatMiniprogram.TouchEvent) {
     const { groupid, title } = e.currentTarget.dataset
 
+    // 先关闭任何打开的滑动项，避免跳转前闪现
+    this.setData({ swipeIndex: -1 })
+
     wx.navigateTo({
       url: `/pages/cardDetail/cardDetail?groupId=${groupid}&title=${encodeURIComponent(title || '')}`
     })
@@ -256,8 +259,7 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
     const index = e.currentTarget.dataset.index
     if (index === undefined || index === null) return
     this.setData({
-      startX: e.touches[0].clientX,
-      swipeIndex: this.data.swipeIndex === index ? -1 : index
+      startX: e.touches[0].clientX
     })
   },
 
