@@ -1,7 +1,7 @@
 .container {
   min-height: 100vh;
   background: var(--bg-color);
-  padding: 30rpx;
+  padding: var(--spacing-md);
 }
 
 .loading-container {
@@ -41,7 +41,7 @@
   padding: 20rpx 60rpx;
   background: var(--card-bg);
   border: 2rpx solid var(--primary-color);
-  border-radius: 40rpx;
+  border-radius: var(--radius-xl);
   color: var(--primary-color);
   font-size: 28rpx;
   font-weight: 500;
@@ -54,8 +54,8 @@
 /* 卡牌组信息卡片 */
 .group-info-card {
   background: var(--card-bg);
-  border-radius: 24rpx;
-  padding: 30rpx;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
   display: flex;
   align-items: center;
   gap: 20rpx;
@@ -72,7 +72,7 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--primary-light) 0%, #d1fae5 100%);
-  border-radius: 20rpx;
+  border-radius: var(--radius-md);
 }
 
 .group-details {
@@ -109,7 +109,7 @@
 .card-item {
   background: var(--card-bg);
   border: 1rpx solid var(--border-color);
-  border-radius: 20rpx;
+  border-radius: var(--radius-md);
   padding: 24rpx;
   display: flex;
   flex-direction: column;
@@ -293,8 +293,8 @@
 
 .hub-option {
   background: var(--card-bg);
-  border-radius: 20rpx;
-  padding: 30rpx;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
   display: flex;
   align-items: center;
   gap: 20rpx;

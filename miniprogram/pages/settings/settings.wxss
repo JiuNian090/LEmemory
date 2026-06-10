@@ -37,21 +37,21 @@ page {
 }
 
 .security-icon {
-  background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%);
+  background: var(--gradient-about);
 }
 
 .icon-text {
-  font-size: 28rpx;
+  font-size: var(--font-size-lg);
 }
 
 .section-title {
-  font-size: 32rpx;
+  font-size: var(--font-size-xl);
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .section-body {
-  padding: 0 30rpx 10rpx;
+  padding: 0 var(--spacing-md) 10rpx;
 }
 
 .menu-list {
@@ -112,7 +112,7 @@ page {
 .empty-tip {
   text-align: center;
   padding: 60rpx 0;
-  font-size: 28rpx;
+  font-size: var(--font-size-lg);
   color: var(--text-tertiary);
 }
 
@@ -132,7 +132,7 @@ page {
 .modal-content {
   width: 600rpx;
   background: var(--card-bg);
-  border-radius: 24rpx;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
@@ -150,11 +150,11 @@ page {
 
 .modal-input {
   width: 100%;
-  height: 88rpx;
+  height: var(--btn-height);
   background: var(--bg-color);
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
   padding: 0 24rpx;
-  font-size: 28rpx;
+  font-size: var(--font-size-lg);
   color: var(--text-primary);
   box-sizing: border-box;
 }
@@ -226,7 +226,7 @@ page {
   right: 0;
   bottom: 0;
   background: var(--card-bg);
-  border-radius: 32rpx 32rpx 0 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   z-index: 1001;
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -259,11 +259,11 @@ page {
 
 .sheet-input {
   width: 100%;
-  height: 88rpx;
+  height: var(--btn-height);
   background: var(--bg-color);
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
   padding: 0 24rpx;
-  font-size: 28rpx;
+  font-size: var(--font-size-lg);
   color: var(--text-primary);
   box-sizing: border-box;
 }
@@ -298,10 +298,10 @@ page {
 
 .sheet-btn {
   flex: 1;
-  height: 88rpx;
-  line-height: 88rpx;
+  height: var(--btn-height);
+  line-height: var(--btn-height);
   text-align: center;
-  border-radius: 44rpx;
+  border-radius: var(--radius-xl);
   font-size: 30rpx;
   font-weight: 500;
 }
@@ -338,7 +338,7 @@ page {
   display: flex;
   align-items: center;
   padding: 20rpx 24rpx;
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
   margin-bottom: 12rpx;
   background: var(--bg-color);
   transition: background 0.2s;
@@ -388,7 +388,7 @@ page {
 
 .account-badge {
   flex-shrink: 0;
-  font-size: 22rpx;
+  font-size: var(--font-size-xs);
   color: var(--primary-color);
   background: var(--primary-light);
   border-radius: 8rpx;

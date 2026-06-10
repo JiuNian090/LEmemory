@@ -9,11 +9,11 @@ page {
 
 /* ========== 头部 ========== */
 .page-header {
-  margin: 30rpx 30rpx 30rpx;
-  padding: 64rpx 30rpx;
+  margin: var(--spacing-md);
+  padding: 64rpx var(--spacing-md);
   background: var(--header-gradient);
-  border-radius: 24rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
 }
 
 .header-content {
@@ -45,7 +45,7 @@ page {
 /* ========== 区块卡片 ========== */
 .section {
   background: var(--card-bg);
-  border-radius: 24rpx;
+  border-radius: var(--radius-lg);
   margin: 0 30rpx 30rpx;
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -61,7 +61,7 @@ page {
 .section-icon {
   width: 48rpx;
   height: 48rpx;
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -154,7 +154,7 @@ page {
 /* 时间线内容卡片 */
 .timeline-content {
   background: var(--bg-color);
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
   padding: 24rpx;
 }
 

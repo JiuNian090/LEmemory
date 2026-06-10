@@ -1,7 +1,7 @@
 .card-group-item {
   background: var(--card-bg);
-  border-radius: 16rpx;
-  padding: 30rpx;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
 }
 
 .item-emoji {

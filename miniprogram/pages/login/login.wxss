@@ -13,7 +13,7 @@ page {
 /* 通用卡片样式 */
 .section {
   background: var(--card-bg);
-  border-radius: 24rpx;
+  border-radius: var(--radius-lg);
   margin: 0 30rpx 24rpx;
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -29,7 +29,7 @@ page {
 .section-icon {
   width: 48rpx;
   height: 48rpx;
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -133,7 +133,7 @@ page {
 .action-btn {
   width: 100%;
   height: 96rpx;
-  border-radius: 24rpx;
+  border-radius: var(--radius-lg);
   font-size: 32rpx;
   font-weight: 600;
   border: none;
@@ -179,7 +179,7 @@ page {
   display: flex;
   align-items: center;
   background: var(--card-bg);
-  border-radius: 24rpx;
+  border-radius: var(--radius-lg);
   padding: 0 30rpx;
   height: 100rpx;
   position: relative;
@@ -247,7 +247,7 @@ page {
   background: var(--header-gradient);
   color: var(--header-text);
   border: none;
-  border-radius: 24rpx;
+  border-radius: var(--radius-lg);
   font-size: 34rpx;
   font-weight: 600;
   margin-bottom: 40rpx;

@@ -27,7 +27,7 @@
   padding: 40rpx;
   box-sizing: border-box;
   background: var(--card-bg);
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
   font-size: 32rpx;
   color: var(--text-primary);
   text-align: center;

@@ -26,6 +26,27 @@ page {
   --danger-gradient: linear-gradient(135deg, #f87171, #ef4444);
   --mask-bg: rgba(0, 0, 0, 0.5);
   --shadow-heavy: 0 16rpx 48rpx rgba(0, 0, 0, 0.12);
+  --shadow-card: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+  --font-size-xxl: 36rpx;
+  --font-size-xl: 32rpx;
+  --font-size-lg: 28rpx;
+  --font-size-md: 26rpx;
+  --font-size-sm: 24rpx;
+  --font-size-xs: 22rpx;
+  --spacing-xs: 16rpx;
+  --spacing-xxs: 12rpx;
+  --radius-xl: 40rpx;
+  --btn-height: 88rpx;
+  --btn-height-sm: 80rpx;
+  --gradient-data: linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%);
+  --gradient-cloud: linear-gradient(135deg, #f0f5ff 0%, #f5f8ff 100%);
+  --gradient-about: linear-gradient(135deg, #fff7e6 0%, #fff9f0 100%);
+  --gradient-changelog: linear-gradient(135deg, #f6ffed 0%, #f0fff0 100%);
+  --gradient-indigo: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  --mastery-not-started: #d1d5db;
+  --mastery-basic: #fbbf24;
+  --mastery-good: #34d399;
+  --mastery-difficult: #f87171;
   
   background-color: var(--bg-color);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
@@ -54,6 +75,27 @@ page {
     --danger-gradient: linear-gradient(135deg, #ef4444, #dc2626);
     --mask-bg: rgba(0, 0, 0, 0.6);
     --shadow-heavy: 0 16rpx 48rpx rgba(0, 0, 0, 0.35);
+    --shadow-card: 0 4rpx 20rpx rgba(0, 0, 0, 0.3);
+    --font-size-xxl: 36rpx;
+    --font-size-xl: 32rpx;
+    --font-size-lg: 28rpx;
+    --font-size-md: 26rpx;
+    --font-size-sm: 24rpx;
+    --font-size-xs: 22rpx;
+    --spacing-xs: 16rpx;
+    --spacing-xxs: 12rpx;
+    --radius-xl: 40rpx;
+    --btn-height: 88rpx;
+    --btn-height-sm: 80rpx;
+    --gradient-data: linear-gradient(135deg, #0c2d3f 0%, #0a2e3a 100%);
+    --gradient-cloud: linear-gradient(135deg, #1a1040 0%, #1f1245 100%);
+    --gradient-about: linear-gradient(135deg, #3a2a0a 0%, #3f2e0a 100%);
+    --gradient-changelog: linear-gradient(135deg, #0a2e1a 0%, #0a2e1a 100%);
+    --gradient-indigo: linear-gradient(135deg, #1a1040 0%, #1f1245 100%);
+    --mastery-not-started: #6b7280;
+    --mastery-basic: #fbbf24;
+    --mastery-good: #34d399;
+    --mastery-difficult: #f87171;
   }
 }
 
@@ -91,7 +133,7 @@ page {
 /* ========== 容器 ========== */
 .container {
   min-height: 100vh;
-  padding-bottom: 40rpx;
+  padding-bottom: var(--spacing-lg);
   opacity: 1;
   transition: opacity 0.2s ease-in-out;
   box-sizing: border-box;
@@ -100,12 +142,12 @@ page {
 /* ========== 页面标题区 ========== */
 .page-header {
   position: relative;
-  margin: 30rpx 30rpx 30rpx;
-  padding: 64rpx 30rpx 64rpx;
+  margin: var(--spacing-md);
+  padding: 64rpx var(--spacing-md);
   background: var(--header-gradient);
   border-bottom: 2rpx solid var(--border-color);
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
-  border-radius: 24rpx;
+  box-shadow: var(--shadow);
+  border-radius: var(--radius-lg);
   opacity: 1;
   transform: translateY(0);
   transition: all 0.3s ease-in-out;
@@ -121,23 +163,23 @@ page {
   font-size: 36rpx;
   font-weight: 600;
   color: var(--header-text);
-  margin-bottom: 20rpx;
+  margin-bottom: var(--spacing-sm);
   text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.1);
   display: block;
 }
 
 .header-subtitle {
-  font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: var(--font-size-sm);
+  color: var(--header-text-secondary);
   font-weight: 400;
 }
 
 /* ========== 区块卡片 ========== */
 .section {
   background: var(--card-bg);
-  border-radius: 24rpx;
-  margin: 0 30rpx 30rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-lg);
+  margin: 0 var(--spacing-md) var(--spacing-md);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
   transform: translateY(0);
   opacity: 1;
@@ -147,7 +189,7 @@ page {
 .section-header {
   display: flex;
   align-items: center;
-  padding: 30rpx;
+  padding: var(--spacing-md);
   position: relative;
   justify-content: space-between;
 }
@@ -155,28 +197,28 @@ page {
 .section-icon {
   width: 48rpx;
   height: 48rpx;
-  font-size: 36rpx;
+  font-size: var(--font-size-xxl);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 16rpx;
+  margin-right: var(--spacing-xs);
 }
 
 .data-icon {
-  background: linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%);
+  background: var(--gradient-data);
 }
 
 .cloud-icon {
-  background: linear-gradient(135deg, #f0f5ff 0%, #f5f8ff 100%);
+  background: var(--gradient-cloud);
 }
 
 .about-icon {
-  background: linear-gradient(135deg, #fff7e6 0%, #fff9f0 100%);
+  background: var(--gradient-about);
 }
 
 .changelog-icon {
-  background: linear-gradient(135deg, #f6ffed 0%, #f0fff0 100%);
+  background: var(--gradient-changelog);
 }
 
 .icon-text {
@@ -191,14 +233,14 @@ page {
 }
 
 .section-body {
-  padding: 0 30rpx 30rpx;
+  padding: 0 var(--spacing-md) var(--spacing-md);
 }
 
 /* ========== 按钮网格 ========== */
 .btn-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 24rpx;
+  gap: var(--spacing-sm);
 }
 
 .grid-btn {
@@ -206,9 +248,9 @@ page {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 32rpx 20rpx;
+  padding: 32rpx var(--spacing-sm);
   background: var(--bg-color);
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
   transition: all 0.2s ease;
 }
 
@@ -219,26 +261,26 @@ page {
 
 .btn-icon {
   font-size: 40rpx;
-  margin-bottom: 12rpx;
+  margin-bottom: var(--spacing-xxs);
 }
 
 .btn-text {
-  font-size: 26rpx;
+  font-size: var(--font-size-md);
   color: var(--text-secondary);
   font-weight: 500;
 }
 
 /* 按钮颜色 */
 .export-btn {
-  background: linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%);
+  background: var(--gradient-data);
 }
 
 .share-btn {
-  background: linear-gradient(135deg, #f6ffed 0%, #f0fff0 100%);
+  background: var(--gradient-changelog);
 }
 
 .import-btn {
-  background: linear-gradient(135deg, #f6ffed 0%, #f0fff0 100%);
+  background: var(--gradient-changelog);
 }
 
 .clear-btn {
@@ -346,11 +388,11 @@ page {
 
 .modal-btn {
   flex: 1;
-  height: 88rpx;
-  line-height: 88rpx;
+  height: var(--btn-height);
+  line-height: var(--btn-height);
   text-align: center;
   border-radius: var(--radius-md);
-  font-size: 28rpx;
+  font-size: var(--font-size-lg);
   font-weight: 500;
   border: none;
   padding: 0;
@@ -377,7 +419,7 @@ page {
 
 /* ========== 表单样式 ========== */
 .form-group {
-  margin-bottom: 24rpx;
+  margin-bottom: var(--spacing-sm);
 }
 
 .form-group:last-child {
@@ -386,17 +428,17 @@ page {
 
 .form-label {
   display: block;
-  font-size: 26rpx;
+  font-size: var(--font-size-md);
   color: var(--text-secondary);
-  margin-bottom: 12rpx;
+  margin-bottom: var(--spacing-xxs);
 }
 
 .form-input {
-  height: 88rpx;
+  height: var(--btn-height);
   background: var(--bg-color);
   border-radius: var(--radius-md);
-  padding: 0 20rpx;
-  font-size: 28rpx;
+  padding: 0 var(--spacing-sm);
+  font-size: var(--font-size-lg);
   color: var(--text-primary);
 }
 
@@ -492,5 +534,61 @@ page {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 20rpx;
+  }
+}
+
+/* ========== 动效定义 ========== */
+
+/* 列表卡牌渐入上移动效 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 空状态图标浮动 */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10rpx);
+  }
+}
+
+/* 弹窗缩放入场 */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 淡入动效 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ========== 减少动效模式 ========== */
+@media (prefers-reduced-motion: reduce) {
+  page,
+  .card-list,
+  .backup-list,
+  .modal-content,
+  .modal-container,
+  .empty-icon,
+  .swipe-content {
+    animation: none !important;
+    transition: none !important;
   }
 }
