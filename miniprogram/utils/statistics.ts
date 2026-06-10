@@ -3,7 +3,8 @@
  * 替代原来的 statistics_get 云函数，从本地存储读取数据计算统计结果
  */
 import { getLocalStorageData, getDailyStudyMap } from './db'
-import type { StudyRecord, CardGroup, Card, StatisticsResult, PeriodType } from './types'
+import { calculateOptimalChartUnit } from './statistics-helpers'
+import type { StudyRecord, CardGroup, Card, StatisticsResult, PeriodType, TrendPoint } from './types'
 
 const DAY_MS = 86400000
 const DEFAULT_DAILY_GOAL = 30
@@ -84,6 +85,14 @@ function calculateLongestStreak(dateSet: Set<string>): number {
   return longest
 }
 
+function getMondayOfWeek(d: Date): Date {
+  const result = new Date(d)
+  const day = result.getDay() // 0=Sun, 1=Mon, ...
+  const diff = day === 0 ? -6 : 1 - day // Monday = 1
+  result.setDate(result.getDate() + diff)
+  return result
+}
+
 function getHeatmapLevel(value: number, dailyGoalSeconds: number): 0 | 1 | 2 | 3 | 4 | 5 {
   if (value === 0) return 0
   if (dailyGoalSeconds <= 0) return 0
@@ -139,20 +148,62 @@ function buildResult(
     cur.setDate(cur.getDate() + 1)
   }
 
-  const trendData = allDays.map(d => {
-    const date = parseDateStr(d)
-    return {
-      date: d,
-      duration: dailyMap.get(d) || 0,
-      label: `${date.getMonth() + 1}/${date.getDate()}`
-    }
-  })
-
+  // 月度数据（用于月度柱状图和按月聚合趋势）
   const months = enumerateMonths(start, end)
   const monthlyData = months.map(m => ({
     month: m,
     duration: monthMap.get(m) || 0
   }))
+
+  const chartUnit = calculateOptimalChartUnit(toDateStr(start), toDateStr(end))
+  let trendData: TrendPoint[]
+
+  if (chartUnit === 'day') {
+    trendData = allDays.map(d => {
+      const date = parseDateStr(d)
+      return {
+        date: d,
+        duration: dailyMap.get(d) || 0,
+        label: `${date.getMonth() + 1}/${date.getDate()}`
+      }
+    })
+  } else if (chartUnit === 'week') {
+    // 按周聚合
+    const weekMap = new Map<string, { total: number }>()
+    allDays.forEach(d => {
+      const dateObj = parseDateStr(d)
+      const monday = getMondayOfWeek(dateObj)
+      const weekKey = toDateStr(monday)
+      const entry = weekMap.get(weekKey)
+      if (entry) {
+        entry.total += dailyMap.get(d) || 0
+      } else {
+        weekMap.set(weekKey, { total: dailyMap.get(d) || 0 })
+      }
+    })
+    trendData = Array.from(weekMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([weekKey, { total }]) => {
+        const monday = parseDateStr(weekKey)
+        const sunday = new Date(monday)
+        sunday.setDate(sunday.getDate() + 6)
+        return {
+          date: weekKey,
+          duration: total,
+          label: `${monday.getMonth() + 1}/${monday.getDate()}~${sunday.getMonth() + 1}/${sunday.getDate()}`
+        }
+      })
+  } else {
+    // 'month' — 按月聚合
+    trendData = months.map(m => {
+      const mo = parseInt(m.split('-')[1], 10)
+      return {
+        date: `${m}-01`,
+        duration: monthMap.get(m) || 0,
+        label: `${mo}月`
+      }
+    })
+  }
 
   const year = start.getFullYear()
   const heatmapData = []
@@ -221,6 +272,7 @@ function buildResult(
     longestStreak: qualifiedLongest,
     trendData,
     monthlyData,
+    chartUnit,
     heatmapData,
     groupPieData,
     startDate: toDateStr(start),

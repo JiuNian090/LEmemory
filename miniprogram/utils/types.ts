@@ -111,6 +111,9 @@ export interface IAppOption {
 
 export type PeriodType = 'week' | 'month' | 'year' | 'all' | 'custom'
 
+/** 图表时间粒度：按天/按周/按月 */
+export type ChartTimeUnit = 'day' | 'week' | 'month'
+
 export interface TrendPoint {
   date: string
   duration: number
@@ -150,6 +153,7 @@ export interface StatisticsResult {
   achievementRate: number
   currentStreak: number
   longestStreak: number
+  chartUnit: ChartTimeUnit
   trendData: TrendPoint[]
   monthlyData: MonthlyPoint[]
   heatmapData: HeatmapPoint[]

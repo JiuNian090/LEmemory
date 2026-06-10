@@ -1,5 +1,5 @@
 // 统计相关的纯函数工具
-import type { PeriodType, StudyRecord } from './types'
+import type { PeriodType, StudyRecord, ChartTimeUnit } from './types'
 
 const DAY_MS = 86400000
 
@@ -78,6 +78,22 @@ export function enumerateDates(start: string, end: string): string[] {
     cur.setDate(cur.getDate() + 1)
   }
   return dates
+}
+
+const DAY_THRESHOLD = 7
+const WEEK_THRESHOLD = 62
+
+/**
+ * 根据日期范围自动选择图表时间粒度
+ * ≤ 7天 → 按天（daily），≤ 62天 → 按周（weekly），> 62天 → 按月（monthly）
+ */
+export function calculateOptimalChartUnit(startDate: string, endDate: string): ChartTimeUnit {
+  const start = parseDateStr(startDate)
+  const end = parseDateStr(endDate)
+  const dayCount = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+  if (dayCount <= DAY_THRESHOLD) return 'day'
+  if (dayCount <= WEEK_THRESHOLD) return 'week'
+  return 'month'
 }
 
 export interface ChangeResult {

@@ -246,7 +246,7 @@ Page<StatisticsPageData, WechatMiniprogram.IAnyObject>({
         const width = (canvasInfo.width || 0) * dpr
         const height = (canvasInfo.height || 0) * dpr
         if (width === 0 || height === 0) return
-        drawLineChart(canvas, result.trendData, width, height)
+        drawLineChart(canvas, result.trendData, width, height, result.chartUnit)
       })
   },
 

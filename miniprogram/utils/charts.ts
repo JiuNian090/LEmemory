@@ -2,7 +2,7 @@
 // 注意：<canvas type="2d"> 的 getContext('2d') 在运行时返回 HTML5 标准 Canvas 2D 上下文
 // （使用属性访问 API，如 ctx.fillStyle = 'red'），而不是旧版 setter API（setFillStyle）
 // canvas.getContext 在类型上声明为返回 any，因此无需类型断言
-import type { TrendPoint, MonthlyPoint, HeatmapPoint, PieSlice } from './types'
+import type { TrendPoint, MonthlyPoint, HeatmapPoint, PieSlice, ChartTimeUnit } from './types'
 import type { ThemeColors } from './theme-colors'
 import { getThemeColors } from './theme-colors'
 import { formatDurationShort } from './statistics-helpers'
@@ -52,6 +52,7 @@ export function drawLineChart(
   data: TrendPoint[],
   width: number,
   height: number,
+  chartUnit: ChartTimeUnit = 'day',
   theme: ThemeColors = getThemeColors()
 ): void {
   const { ctx, cssWidth, cssHeight } = prepareCanvas(canvas, width, height)
@@ -67,6 +68,14 @@ export function drawLineChart(
 
   const maxVal = Math.max(...data.map(d => d.duration), 1)
   const yMax = maxVal * 1.2
+
+  // 图表粒度标注（右上角）
+  const unitLabels: Record<ChartTimeUnit, string> = { day: '按天', week: '按周', month: '按月' }
+  ctx.fillStyle = theme.textTertiary
+  ctx.font = '10px sans-serif'
+  ctx.textAlign = 'right'
+  ctx.textBaseline = 'top'
+  ctx.fillText(unitLabels[chartUnit], cssWidth - PADDING.right, PADDING.top - 16)
 
   // 网格线
   ctx.strokeStyle = theme.grid
@@ -129,17 +138,26 @@ export function drawLineChart(
     ctx.fill()
   })
 
-  // X 轴标签
+  // X 轴标签 — 根据粒度智能分布
   ctx.fillStyle = theme.textTertiary
   ctx.font = '10px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
-  const labelStep = Math.max(1, Math.floor(data.length / 7))
-  points.forEach((p, i) => {
-    if (i % labelStep === 0 || i === points.length - 1) {
-      ctx.fillText(data[i].label, p.x, PADDING.top + plotH + 6)
-    }
-  })
+  const totalLabels = points.length
+  if (totalLabels <= 12) {
+    // 标签少时全部显示
+    points.forEach(p => {
+      ctx.fillText(p.data.label, p.x, PADDING.top + plotH + 6)
+    })
+  } else {
+    // 标签多时均匀显示约 8 个（含首尾）
+    const step = Math.max(1, Math.floor(totalLabels / 8))
+    points.forEach((p, i) => {
+      if (i % step === 0 || i === totalLabels - 1) {
+        ctx.fillText(p.data.label, p.x, PADDING.top + plotH + 6)
+      }
+    })
+  }
 
 }
 
@@ -295,7 +313,7 @@ export function drawMonthlyBarChart(
     ctx.fillStyle = theme.textTertiary
     ctx.textAlign = 'center'
     ctx.textBaseline = 'top'
-    const monthLabel = d.month.slice(5)
+    const monthLabel = `${parseInt(d.month.slice(5), 10)}月`
     ctx.fillText(monthLabel, x + barWidth / 2, PADDING.top + plotH + 6)
   })
 
