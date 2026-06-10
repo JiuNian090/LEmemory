@@ -13,7 +13,7 @@
       </view>
       <text class="section-title">卡牌组</text>
       <view class="section-right">
-        <button class="add-btn" bindtap="createCardGroup" style="width: 154rpx; display: flex; box-sizing: border-box; left: 0rpx; top: 0rpx; height: 58rpx">
+        <button class="add-btn" bindtap="createCardGroup">
           <text class="add-icon">+</text>
           <text class="add-text">新建</text>
         </button>
