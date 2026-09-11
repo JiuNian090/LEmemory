@@ -20,6 +20,10 @@ miniprogram/unpackage/
 miniprogram/dev/
 miniprogram/build/
 
+# npm 构建产物（由开发者工具「工具-构建 npm」生成，不纳入版本管理）
+# 克隆仓库后执行 npm install，再运行 npm run build:npm 即可重新生成
+miniprogram/miniprogram_npm/
+
 # -----------------------------------------
 # 云函数依赖
 # -----------------------------------------
