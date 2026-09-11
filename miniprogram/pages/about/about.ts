@@ -14,13 +14,13 @@ const app = getApp<IAppOption>()
 Page<AboutPageData, WechatMiniprogram.IAnyObject>({
   data: {
     appName: 'LEmemory',
-    appVersion: '1.2.5',
+    appVersion: '1.3.2',
     appDesc: '智能记忆卡片，高效学习助手',
     changelog: changelogData
   },
 
   onLoad() {
-    const version = app.globalData?.appVersion || '1.2.5'
+    const version = app.globalData?.appVersion || '1.3.2'
     this.setData({ appVersion: version })
 
     try {

@@ -5,7 +5,7 @@ import { syncUserProfile } from './utils/userSync'
 App<IAppOption>({
   globalData: {
     userInfo: null,
-    appVersion: '1.2.5'
+    appVersion: '1.3.2'
   },
   onLaunch() {
     // 尝试初始化云开发，但不强制要求
