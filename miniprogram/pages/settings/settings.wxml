@@ -63,6 +63,39 @@
     </view>
   </view>
 
+  <view class="section">
+    <view class="section-header">
+      <view class="section-icon">
+        <text class="icon-text">📚</text>
+      </view>
+      <text class="section-title">学习设置</text>
+    </view>
+    <view class="section-body">
+      <view class="menu-list">
+        <view class="menu-item" bindtap="showSrsEdit" data-field="newCards">
+          <view class="item-left">
+            <text class="menu-icon">🆕</text>
+            <text class="menu-text">每日新卡上限</text>
+          </view>
+          <view class="item-right">
+            <text class="item-value">{{dailyNewCards}} 张</text>
+            <text class="item-arrow">›</text>
+          </view>
+        </view>
+        <view class="menu-item" bindtap="showSrsEdit" data-field="reviewLimit">
+          <view class="item-left">
+            <text class="menu-icon">🔁</text>
+            <text class="menu-text">每日复习上限</text>
+          </view>
+          <view class="item-right">
+            <text class="item-value">{{dailyReviewLimit}} 张</text>
+            <text class="item-arrow">›</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
   <view class="section" wx:if="{{!userInfo}}">
     <view class="section-body">
       <view class="empty-tip">请先登录后再进行设置</view>
@@ -174,5 +207,25 @@
         <view class="sheet-btn sheet-btn--danger" bindtap="confirmSwitchAccount">登录新账号</view>
       </view>
     </block>
+  </view>
+</view>
+
+<view class="sheet-mask {{showSrsSheet ? 'sheet-mask--show' : ''}}" bindtap="hideSrsSheet"></view>
+<view class="sheet-panel {{showSrsSheet ? 'sheet-panel--show' : ''}}">
+  <view class="sheet-handle"></view>
+  <view class="sheet-title">{{srsSheetTitle}}</view>
+  <view class="sheet-body">
+    <input
+      class="sheet-input"
+      type="number"
+      placeholder="请输入数字"
+      value="{{srsSheetValue}}"
+      bindinput="onSrsValueInput"
+      focus="{{showSrsSheet}}"
+    />
+  </view>
+  <view class="sheet-footer">
+    <view class="sheet-btn sheet-btn--cancel" bindtap="hideSrsSheet">取消</view>
+    <view class="sheet-btn sheet-btn--confirm" bindtap="saveSrsSetting">保存</view>
   </view>
 </view>

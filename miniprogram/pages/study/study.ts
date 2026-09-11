@@ -430,13 +430,13 @@ Page<StudyPageData, WechatMiniprogram.IAnyObject>({
 
       // 找到本地数据中的记录，获取 _id
       const target = this.data.cardGroups.find(g => g.groupId === groupId)
-      if (!target || !target._id) {
+      if (!target) {
         wx.hideLoading()
         wx.showToast({ title: '未找到该卡牌组', icon: 'none' })
         return
       }
 
-      await cardGroupCollection.doc(target._id).update({
+      await cardGroupCollection.doc(target.groupId).update({
         data: {
           title,
           description,

@@ -1,4 +1,6 @@
 import { setEncryptedStorage, getEncryptedStorage } from './crypto'
+import { DEFAULT_SRS_SETTINGS } from './srs'
+import type { SrsSettings } from './srs'
 import type { CardGroup, Card, StudyRecord, Favorite, BackupData } from './types'
 
 // ==================== 本地存储操作 ====================
@@ -217,6 +219,7 @@ class LocalDoc {
       case 'cardGroups': return 'groupId'
       case 'favorites': return 'favoriteId'
       case 'studyRecords': return 'recordId'
+      case 'cardTemplates': return 'templateId'
       default: return '_id'
     }
   }
@@ -280,6 +283,7 @@ export const cardGroupCollection = new LocalCollection('card_groups', 'cardGroup
 export const cardCollection = new LocalCollection('cards', 'cards')
 export const studyRecordCollection = new LocalCollection('study_records', 'studyRecords')
 export const favoriteCollection = new LocalCollection('favorites', 'favorites')
+export const cardTemplateCollection = new LocalCollection('card_templates', 'cardTemplates')
 
 // 兼容旧引用
 export const userCollection = new LocalCollection('users', 'users')
@@ -366,7 +370,48 @@ const STORAGE_KEYS = {
 }
 
 /** 用户设置项（通过 wx.setStorageSync 存储的独立设置） */
-const USER_SETTING_KEYS = ['dailyGoalMinutes']
+const USER_SETTING_KEYS = ['dailyGoalMinutes', 'dailyNewCards', 'dailyReviewLimit']
+
+/** 读取一个数值型设置项（缺失或非法时回落默认值） */
+function readNumberSetting(key: string, fallback: number): number {
+  try {
+    const raw = wx.getStorageSync(key)
+    if (raw === '' || raw === null || raw === undefined) return fallback
+    const value = Number(raw)
+    return Number.isFinite(value) && value >= 0 ? Math.floor(value) : fallback
+  } catch (err: any) {
+    console.error('[DB] 读取设置失败', key, err)
+    return fallback
+  }
+}
+
+/** 读取 SRS 调度设置 */
+export function getSrsSettings(): SrsSettings {
+  return {
+    dailyNewCards: readNumberSetting('dailyNewCards', DEFAULT_SRS_SETTINGS.dailyNewCards),
+    dailyReviewLimit: readNumberSetting('dailyReviewLimit', DEFAULT_SRS_SETTINGS.dailyReviewLimit)
+  }
+}
+
+/** 保存 SRS 调度设置（不可变更新，仅写入传入的字段） */
+export function setSrsSettings(partial: Partial<SrsSettings>): boolean {
+  const next: SrsSettings = { ...getSrsSettings(), ...partial }
+  let ok = true
+  for (const key of ['dailyNewCards', 'dailyReviewLimit'] as const) {
+    const value = next[key]
+    if (!Number.isFinite(value) || value < 0) {
+      ok = false
+      continue
+    }
+    try {
+      wx.setStorageSync(key, Math.floor(value))
+    } catch (err: any) {
+      console.error('[DB] 保存设置失败', key, err)
+      ok = false
+    }
+  }
+  return ok
+}
 
 export function exportAllLocalData(): BackupData {
   const cardGroups = getLocalStorageData(STORAGE_KEYS.CARD_GROUPS) as CardGroup[]
@@ -388,7 +433,7 @@ export function exportAllLocalData(): BackupData {
 
   return {
     version: '1.0',
-    schemaVersion: '2.0',
+    schemaVersion: '2.2',
     appVersion: '1.0.0',
     backupTime: new Date(),
     summary: {

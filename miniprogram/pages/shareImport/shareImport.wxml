@@ -17,7 +17,7 @@
         <text class="hub-option-icon">📁</text>
         <view class="hub-option-texts">
           <text class="hub-option-title">从文件导入</text>
-          <text class="hub-option-desc">选择好友分享的卡牌文件（.json）</text>
+          <text class="hub-option-desc">支持 .json / .csv / .txt / .xlsx</text>
         </view>
         <text class="hub-option-arrow">›</text>
       </view>
@@ -26,7 +26,7 @@
         <text class="hub-option-icon">📋</text>
         <view class="hub-option-texts">
           <text class="hub-option-title">从剪贴板导入</text>
-          <text class="hub-option-desc">粘贴卡牌 JSON 或分享码导入</text>
+          <text class="hub-option-desc">粘贴卡牌 JSON、CSV 或分享码</text>
         </view>
         <text class="hub-option-arrow">›</text>
       </view>
@@ -34,7 +34,7 @@
 
     <view class="hub-tip">
       <text class="hub-tip-icon">💡</text>
-      <text class="hub-tip-text">在卡牌详情页点击「分享卡牌」→「文件分享」，将卡牌导出为文件后发送给好友</text>
+      <text class="hub-tip-text">Excel（.xlsx）取第一个工作表的前两列；CSV/TXT 每行一张卡（正面,背面），支持逗号、制表符、分号、竖线分隔，首行可为表头</text>
     </view>
   </view>
 

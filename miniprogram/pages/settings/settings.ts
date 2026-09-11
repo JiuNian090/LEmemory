@@ -1,4 +1,6 @@
 import { IAppOption } from '../../utils/types'
+import { getSrsSettings, setSrsSettings } from '../../utils/db'
+import { DEFAULT_SRS_SETTINGS } from '../../utils/srs'
 import { syncManager } from '../../utils/sync'
 import { cacheLocalAvatar, getBestAvatarUrl, computeFileHashFromPath } from '../../utils/userSync'
 
@@ -21,7 +23,18 @@ interface SettingsPageData {
   loading: boolean
   showOldPassword: boolean
   showNewPassword: boolean
+  /** 每日新卡上限 */
+  dailyNewCards: number
+  /** 每日复习上限 */
+  dailyReviewLimit: number
+  showSrsSheet: boolean
+  srsSheetField: SrsSettingField
+  srsSheetTitle: string
+  srsSheetValue: string
 }
+
+/** SRS 设置项标识 */
+type SrsSettingField = 'newCards' | 'reviewLimit'
 
 Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
   data: {
@@ -39,7 +52,13 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
     confirmPassword: '',
     loading: false,
     showOldPassword: false,
-    showNewPassword: false
+    showNewPassword: false,
+    dailyNewCards: DEFAULT_SRS_SETTINGS.dailyNewCards,
+    dailyReviewLimit: DEFAULT_SRS_SETTINGS.dailyReviewLimit,
+    showSrsSheet: false,
+    srsSheetField: 'newCards',
+    srsSheetTitle: '',
+    srsSheetValue: ''
   },
 
   onLoad() {
@@ -49,6 +68,15 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
   onShow() {
     this.loadUserInfo()
     this.loadSavedAccounts()
+    this.loadSrsSettings()
+  },
+
+  loadSrsSettings() {
+    const srs = getSrsSettings()
+    this.setData({
+      dailyNewCards: srs.dailyNewCards,
+      dailyReviewLimit: srs.dailyReviewLimit
+    })
   },
 
   loadUserInfo() {
@@ -296,6 +324,51 @@ Page<SettingsPageData, WechatMiniprogram.IAnyObject>({
 
   hideSwitchSheet() {
     this.setData({ showSwitchSheet: false })
+  },
+
+  showSrsEdit(e: WechatMiniprogram.TouchEvent) {
+    const field = e.currentTarget.dataset.field as SrsSettingField
+    const isNewCards = field === 'newCards'
+    this.setData({
+      showSrsSheet: true,
+      srsSheetField: field,
+      srsSheetTitle: isNewCards ? '每日新卡上限' : '每日复习上限',
+      srsSheetValue: String(isNewCards ? this.data.dailyNewCards : this.data.dailyReviewLimit)
+    })
+  },
+
+  hideSrsSheet() {
+    this.setData({ showSrsSheet: false })
+  },
+
+  onSrsValueInput(e: WechatMiniprogram.Input) {
+    this.setData({ srsSheetValue: e.detail.value })
+  },
+
+  saveSrsSetting() {
+    const { srsSheetField, srsSheetValue } = this.data
+    const isNewCards = srsSheetField === 'newCards'
+    const maxValue = isNewCards ? 100 : 500
+
+    const parsed = Number(srsSheetValue)
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      wx.showToast({ title: '请输入不小于 0 的数字', icon: 'none' })
+      return
+    }
+    const value = Math.min(maxValue, Math.floor(parsed))
+
+    const saved = setSrsSettings(isNewCards ? { dailyNewCards: value } : { dailyReviewLimit: value })
+    if (!saved) {
+      wx.showToast({ title: '保存失败，请重试', icon: 'none' })
+      return
+    }
+
+    if (isNewCards) {
+      this.setData({ showSrsSheet: false, dailyNewCards: value })
+    } else {
+      this.setData({ showSrsSheet: false, dailyReviewLimit: value })
+    }
+    wx.showToast({ title: '已保存', icon: 'success' })
   },
 
   async switchToAccount(e: any) {

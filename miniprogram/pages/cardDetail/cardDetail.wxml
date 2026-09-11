@@ -32,6 +32,11 @@
           </view>
           <view class="stat-divider"></view>
           <view class="stat-item">
+            <view class="stat-value review">{{todayStats.toReview}}</view>
+            <view class="stat-label">今日待复习</view>
+          </view>
+          <view class="stat-divider"></view>
+          <view class="stat-item">
             <view class="stat-value review">{{studiedCards}}</view>
             <view class="stat-label">今日已学</view>
           </view>
@@ -60,7 +65,7 @@
             <text class="action-icon">💬</text>
             <text class="action-text">分享</text>
           </button>
-          <view class="quick-action-btn" bindtap="shareCardGroup">
+          <view class="quick-action-btn" bindtap="exportCardGroup">
             <text class="action-icon">📤</text>
             <text class="action-text">导出</text>
           </view>
@@ -71,6 +76,14 @@
           <view class="quick-action-btn clipboard-btn" bindtap="importFromClipboard">
             <text class="action-icon">📋</text>
             <text class="action-text">剪贴板导入</text>
+          </view>
+          <view class="quick-action-btn" bindtap="startPractice" data-status="difficult">
+            <text class="action-icon">😰</text>
+            <text class="action-text">只练疑难</text>
+          </view>
+          <view class="quick-action-btn" bindtap="startPractice" data-status="new">
+            <text class="action-icon">😶</text>
+            <text class="action-text">只练未掌握</text>
           </view>
         </view>
 
@@ -116,13 +129,13 @@
       </view>
 
       <!-- 学习模式 -->
-      <view wx:if="{{isStudying && cards.length > 0}}" class="study-mode">
+      <view wx:if="{{isStudying && sessionCards.length > 0}}" class="study-mode">
         <view class="study-header">
           <view class="study-progress">
             <view class="progress-bar">
-              <view class="progress-fill" style="width: {{(currentCardIndex + 1) / cards.length * 100}}%"></view>
+              <view class="progress-fill" style="width: {{(currentCardIndex + 1) / sessionCards.length * 100}}%"></view>
             </view>
-            <view class="progress-text">{{currentCardIndex + 1}} / {{cards.length}}</view>
+            <view class="progress-text">{{currentCardIndex + 1}} / {{sessionCards.length}}</view>
           </view>
           <view class="study-timer">{{timerDisplay}}</view>
           <view class="study-exit" bindtap="exitStudy">
@@ -130,46 +143,93 @@
           </view>
         </view>
         
-        <view class="card-wrapper" bindtap="flipCard">
-          <view class="study-card {{isFlipped ? 'flipped' : ''}} {{cardAnim}}">
-            <view class="card-face front">
-              <view class="card-label">问题</view>
-              <text class="card-text">{{cards[currentCardIndex].front}}</text>
-            </view>
-            <view class="card-face back">
-              <view class="card-label">答案</view>
-              <text class="card-text">{{cards[currentCardIndex].back}}</text>
+        <!-- 测验模式 -->
+        <block wx:if="{{isQuiz}}">
+          <view class="quiz-question">
+            <view class="card-label">问题</view>
+            <text class="quiz-front">{{sessionCards[currentCardIndex].front}}</text>
+          </view>
+
+          <!-- 选择题 -->
+          <view wx:if="{{quizMode === 'choice'}}" class="quiz-options">
+            <view
+              wx:for="{{quizOptions}}"
+              wx:key="*this"
+              class="quiz-option {{quizAnswered ? (item === quizCorrectAnswer ? 'is-correct' : (item === quizSelectedOption ? 'is-wrong' : 'is-muted')) : ''}}"
+              bindtap="chooseQuizOption"
+              data-option="{{item}}"
+            >
+              <text>{{item}}</text>
             </view>
           </view>
-        </view>
-        <view class="card-hint">点击卡片翻转</view>
-        <view class="card-nav">
-          <button class="nav-btn prev" bindtap="prevCard" disabled="{{currentCardIndex === 0}}">
-            ‹ 上一张
-          </button>
-          <view class="card-index">
-            <text class="current">{{currentCardIndex + 1}}</text>
-            <text class="separator">/</text>
-            <text class="total">{{cards.length}}</text>
+
+          <!-- 填空题 / 拼写题 -->
+          <view wx:else class="quiz-answer">
+            <view wx:if="{{quizMode === 'cloze' && quizClozeText}}" class="quiz-cloze">
+              <text class="quiz-cloze-text">{{quizClozeText}}</text>
+              <text class="quiz-cloze-hint">填写空缺处（{{quizClozeHint}}）</text>
+            </view>
+            <input
+              class="quiz-input"
+              placeholder="请输入答案"
+              value="{{quizInput}}"
+              disabled="{{quizAnswered}}"
+              bindinput="onQuizInput"
+              bindconfirm="submitQuizAnswer"
+            />
+            <view wx:if="{{!quizAnswered}}" class="quiz-submit" bindtap="submitQuizAnswer">提交</view>
           </view>
-          <button class="nav-btn next" bindtap="nextCard" disabled="{{currentCardIndex === cards.length - 1}}">
-            下一张 ›
-          </button>
-        </view>
-        <view class="mastery-buttons">
-          <view class="mastery-btn mastery-btn-new {{cards[currentCardIndex].status === 'new' ? 'active' : ''}}" bindtap="setMasteryAndNext" data-status="new">
+
+          <!-- 作答反馈 -->
+          <view wx:if="{{quizAnswered}}" class="quiz-feedback {{quizIsCorrect ? 'is-correct' : 'is-wrong'}}">
+            <text class="quiz-feedback-icon">{{quizIsCorrect ? '✅' : '❌'}}</text>
+            <text class="quiz-feedback-text">{{quizIsCorrect ? '回答正确' : '正确答案：' + quizCorrectAnswer}}</text>
+          </view>
+        </block>
+
+        <!-- 学习模式（翻牌） -->
+        <block wx:else>
+          <view class="card-wrapper" bindtap="flipCard">
+            <view class="study-card {{isFlipped ? 'flipped' : ''}} {{cardAnim}}">
+              <view class="card-face front">
+                <view class="card-label">问题</view>
+                <text class="card-text">{{sessionCards[currentCardIndex].front}}</text>
+              </view>
+              <view class="card-face back">
+                <view class="card-label">答案</view>
+                <text class="card-text">{{sessionCards[currentCardIndex].back}}</text>
+              </view>
+            </view>
+          </view>
+          <view class="card-hint">点击卡片翻转</view>
+          <view class="card-nav">
+            <button class="nav-btn prev" bindtap="prevCard" disabled="{{currentCardIndex === 0}}">
+              ‹ 上一张
+            </button>
+            <view class="card-index">
+              <text class="current">{{currentCardIndex + 1}}</text>
+              <text class="separator">/</text>
+              <text class="total">{{sessionCards.length}}</text>
+            </view>
+            <button class="nav-btn next" bindtap="nextCard" disabled="{{currentCardIndex === sessionCards.length - 1}}">
+              下一张 ›
+            </button>
+          </view>
+        </block>
+        <view wx:if="{{!isQuiz}}" class="mastery-buttons">
+          <view class="mastery-btn mastery-btn-new {{sessionCards[currentCardIndex].status === 'new' ? 'active' : ''}}" bindtap="setMasteryAndNext" data-status="new">
             <text class="mastery-btn-icon">😶</text>
             <text class="mastery-btn-label">未掌握</text>
           </view>
-          <view class="mastery-btn mastery-btn-learning {{cards[currentCardIndex].status === 'learning' ? 'active' : ''}}" bindtap="setMasteryAndNext" data-status="learning">
+          <view class="mastery-btn mastery-btn-learning {{sessionCards[currentCardIndex].status === 'learning' ? 'active' : ''}}" bindtap="setMasteryAndNext" data-status="learning">
             <text class="mastery-btn-icon">🤔</text>
             <text class="mastery-btn-label">基本掌握</text>
           </view>
-          <view class="mastery-btn mastery-btn-mastered {{cards[currentCardIndex].status === 'mastered' ? 'active' : ''}}" bindtap="setMasteryAndNext" data-status="mastered">
+          <view class="mastery-btn mastery-btn-mastered {{sessionCards[currentCardIndex].status === 'mastered' ? 'active' : ''}}" bindtap="setMasteryAndNext" data-status="mastered">
             <text class="mastery-btn-icon">😊</text>
             <text class="mastery-btn-label">良好掌握</text>
           </view>
-          <view class="mastery-btn mastery-btn-difficult {{cards[currentCardIndex].status === 'difficult' ? 'active' : ''}}" bindtap="setMasteryAndNext" data-status="difficult">
+          <view class="mastery-btn mastery-btn-difficult {{sessionCards[currentCardIndex].status === 'difficult' ? 'active' : ''}}" bindtap="setMasteryAndNext" data-status="difficult">
             <text class="mastery-btn-icon">😰</text>
             <text class="mastery-btn-label">疑难</text>
           </view>

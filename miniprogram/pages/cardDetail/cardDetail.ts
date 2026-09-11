@@ -1,9 +1,55 @@
-import { cardGroupCollection, cardCollection, favoriteCollection, studyRecordCollection, generateId, deleteCardGroup, addDailyStudyDuration, getDailyStudyMap } from '../../utils/db'
+import { cardGroupCollection, cardCollection, favoriteCollection, studyRecordCollection, generateId, deleteCardGroup, addDailyStudyDuration, getDailyStudyMap, getSrsSettings } from '../../utils/db'
 import { showErrorToast } from '../../utils/error'
-import type { IAppOption } from '../../utils/types'
+import { buildCardsCsv, parseCardsFromDelimited } from '../../utils/csv'
+import { isSpreadsheetFile, parseCardsFromXlsx } from '../../utils/xlsx'
+import { buildCloze, buildQuizOptions, isAnswerCorrect, QUIZ_MODE_LABELS, type QuizMode } from '../../utils/quiz'
+import { applyMastery, buildReviewQueue, isFailed, todayKey } from '../../utils/srs'
+import type { IAppOption, MasteryStatus, SrsState } from '../../utils/types'
 import { enableShareMenu } from '../../utils/share'
 
 const app = getApp<IAppOption>()
+
+/** Fisher-Yates 洗牌，返回打乱后的新数组（不改动入参） */
+function shuffleList<T>(list: readonly T[]): T[] {
+  const result = list.slice()
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = result[i]
+    result[i] = result[j]
+    result[j] = tmp
+  }
+  return result
+}
+
+/** 解析导入文本为卡牌：先试 JSON，再试 CSV / 分隔符文本，均失败时返回空数组 */
+function parseImportCards(rawData: string): { front: string; back: string }[] {
+  const candidates = [rawData]
+  const codeBlock = rawData.match(/```(?:json)?\s*([\s\S]*?)```/)
+  const codeBlockBody = codeBlock && codeBlock[1]
+  if (codeBlockBody) candidates.push(codeBlockBody)
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate)
+      if (Array.isArray(parsed)) return filterValidCards(parsed)
+      if (parsed && Array.isArray(parsed.cards)) return filterValidCards(parsed.cards)
+    } catch (_) {
+      // 不是 JSON，继续尝试分隔符文本
+    }
+  }
+
+  for (const candidate of candidates) {
+    const textResult = parseCardsFromDelimited(candidate)
+    if (textResult) return filterValidCards(textResult.cards)
+  }
+
+  return []
+}
+
+/** 过滤出正反面都非空的卡牌 */
+function filterValidCards(cards: { front?: string; back?: string }[]): { front: string; back: string }[] {
+  return cards.filter(card => card.front && card.back) as { front: string; back: string }[]
+}
 
 interface CardItem {
   _id?: string
@@ -14,8 +60,9 @@ interface CardItem {
   back: string
   createTime: Date
   _openid?: string
-  status?: 'new' | 'learning' | 'mastered' | 'difficult'
+  status?: MasteryStatus
   reviewCount?: number
+  srs?: SrsState
 }
 
 interface FavoriteItem {
@@ -58,6 +105,24 @@ interface CardDetailPageData {
   favoriteCardIds: string[]
   isStudying: boolean
   isQuiz: boolean
+  /** 当前学习会话的卡牌队列（与全量 cards 分离，避免学习时污染列表页） */
+  sessionCards: CardItem[]
+  /** 测验题型；空字符串表示非测验 */
+  quizMode: QuizMode | ''
+  /** 选择题备选项 */
+  quizOptions: string[]
+  /** 填空/拼写题的作答输入 */
+  quizInput: string
+  /** 填空题挖空后的背面文本；为空表示本题退化为拼写题 */
+  quizClozeText: string
+  /** 填空题挖空片段提示，如「2 字」 */
+  quizClozeHint: string
+  /** 标准答案（填空题为挖空片段，其余为卡牌背面） */
+  quizCorrectAnswer: string
+  /** 选择题中用户点选的选项 */
+  quizSelectedOption: string
+  quizAnswered: boolean
+  quizIsCorrect: boolean
   todayStats: {
     toLearn: number
     toReview: number
@@ -85,6 +150,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     currentTab: 0,
     tabs: ['学习', '目录', '卡牌', '收藏'],
     cards: [],
+    sessionCards: [],
     displayCards: [],
     favorites: [],
     currentCardIndex: 0,
@@ -99,6 +165,15 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     favoriteCardIds: [],
     isStudying: false,
     isQuiz: false,
+    quizMode: '',
+    quizOptions: [],
+    quizInput: '',
+    quizClozeText: '',
+    quizClozeHint: '',
+    quizCorrectAnswer: '',
+    quizSelectedOption: '',
+    quizAnswered: false,
+    quizIsCorrect: false,
     todayStats: {
       toLearn: 0,
       toReview: 0,
@@ -122,6 +197,9 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   },
 
   pageSize: 10,
+
+  /** 本次会话内已安排过重练的卡牌，保证每张卡每次会话最多重练一次 */
+  relearnedCardIds: null as Set<string> | null,
 
   // 计时器
   timerInterval: null as number | null,
@@ -333,14 +411,16 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       donutGradient = `conic-gradient(#d1d5db ${notStartedEnd}deg, #fbbf24 ${notStartedEnd}deg, #fbbf24 ${basicEnd}deg, #34d399 ${basicEnd}deg, #34d399 ${goodEnd}deg, #f87171 ${goodEnd}deg, #f87171 360deg)`
     }
 
+    const queue = buildReviewQueue(cards, getSrsSettings(), todayKey())
+
     this.setData({
       masteryData,
       studiedCards,
       donutGradient,
       formattedStudiedTime: this.formatTime(this.data.todayStats.studiedTime),
       todayStats: {
-        toLearn: cards.length > 0 ? Math.min(10, cards.length) : 0,
-        toReview: cards.length > 0 ? Math.min(5, cards.length) : 0,
+        toLearn: queue.fresh.length,
+        toReview: queue.due.length,
         studiedTime: this.data.todayStats.studiedTime
       }
     })
@@ -401,7 +481,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
   },
 
   /**
-   * 开始学习
+   * 开始学习：按 SRS 调度构建今日队列（到期待复习 + 新卡）
    */
   startStudy() {
     if (this.data.cards.length === 0) {
@@ -411,12 +491,12 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       })
       return
     }
-    this.setData({ isStudying: true, isQuiz: false, currentCardIndex: 0, isFlipped: false })
-    this.startStudyTimer()
+    const queue = buildReviewQueue(this.data.cards, getSrsSettings(), todayKey())
+    this.beginStudy([...queue.due, ...queue.fresh], false, '今日没有需要复习的卡片')
   },
 
   /**
-   * 开始测验
+   * 开始测验：先选题型，再打乱全部卡牌顺序
    */
   startQuiz() {
     if (this.data.cards.length === 0) {
@@ -426,9 +506,65 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
       })
       return
     }
-    this.shuffleCards()
-    this.setData({ isStudying: true, isQuiz: true, currentCardIndex: 0, isFlipped: false })
+    const modes: QuizMode[] = ['choice', 'cloze', 'spelling']
+    wx.showActionSheet({
+      itemList: [QUIZ_MODE_LABELS.choice, QUIZ_MODE_LABELS.cloze, QUIZ_MODE_LABELS.spelling],
+      success: (res) => {
+        const mode = modes[res.tapIndex]
+        if (mode) this.beginQuiz(mode)
+      }
+    })
+  },
+
+  /**
+   * 进入测验模式并准备第一题
+   */
+  beginQuiz(mode: QuizMode) {
+    if (!this.beginStudy(shuffleList(this.data.cards), true, '请先添加卡牌')) return
+    this.setData({ quizMode: mode })
+    this.prepareQuestion()
+  },
+
+  /**
+   * 专项练习：只练某一掌握程度的卡牌
+   */
+  startPractice(e: WechatMiniprogram.TouchEvent) {
+    const status = e.currentTarget.dataset.status as MasteryStatus
+    const filtered = this.data.cards.filter(card => (card.status || 'new') === status)
+    const emptyTip = status === 'difficult' ? '暂无疑难卡片' : '暂无未掌握卡片'
+    this.beginStudy(filtered, false, emptyTip)
+  },
+
+  /**
+   * 进入学习模式（统一入口）
+   */
+  beginStudy(sessionCards: CardItem[], isQuiz: boolean, emptyTip: string): boolean {
+    if (sessionCards.length === 0) {
+      wx.showToast({
+        title: emptyTip,
+        icon: 'none'
+      })
+      return false
+    }
+    this.relearnedCardIds = new Set()
+    this.setData({
+      sessionCards,
+      isStudying: true,
+      isQuiz,
+      quizMode: '',
+      quizOptions: [],
+      quizInput: '',
+      quizClozeText: '',
+      quizClozeHint: '',
+      quizCorrectAnswer: '',
+      quizSelectedOption: '',
+      quizAnswered: false,
+      quizIsCorrect: false,
+      currentCardIndex: 0,
+      isFlipped: false
+    })
     this.startStudyTimer()
+    return true
   },
 
   /**
@@ -436,19 +572,117 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
    */
   exitStudyMode() {
     this.stopStudyTimer()
-    this.setData({ isStudying: false, isQuiz: false, currentCardIndex: 0, isFlipped: false })
+    this.setData({ isStudying: false, isQuiz: false, sessionCards: [], currentCardIndex: 0, isFlipped: false })
   },
 
   /**
-   * 洗牌（Fisher-Yates）
+   * 当轮重练：遗忘的卡牌排到队尾再出现一次（每张卡每次会话最多一次）
+   */
+  appendRelearnCard(status: MasteryStatus) {
+    if (!isFailed(status)) return
+    const relearned = this.relearnedCardIds
+    if (!relearned) return
+    const card = this.data.sessionCards[this.data.currentCardIndex]
+    if (!card || relearned.has(card.cardId)) return
+    relearned.add(card.cardId)
+    this.setData({ sessionCards: [...this.data.sessionCards, card] })
+  },
+
+  /**
+   * 洗牌（Fisher-Yates）——返回打乱后的新数组
    */
   shuffleCards() {
-    const cards = [...this.data.cards]
-    for (let i = cards.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [cards[i], cards[j]] = [cards[j], cards[i]]
+    return shuffleList(this.data.cards)
+  },
+
+  /**
+   * 为当前卡牌生成题目（选择题选项 / 填空题挖空）
+   */
+  prepareQuestion() {
+    const card = this.data.sessionCards[this.data.currentCardIndex]
+    if (!card) return
+
+    const patch: Record<string, any> = {
+      quizInput: '',
+      quizSelectedOption: '',
+      quizAnswered: false,
+      quizIsCorrect: false,
+      quizCorrectAnswer: card.back,
+      quizClozeText: '',
+      quizClozeHint: '',
+      quizOptions: []
     }
-    this.setData({ cards, currentCardIndex: 0, isFlipped: false })
+
+    if (this.data.quizMode === 'choice') {
+      const pool = this.data.cards
+        .filter(item => item.cardId !== card.cardId)
+        .map(item => item.back as string)
+      patch.quizOptions = buildQuizOptions(card.back, pool)
+    } else if (this.data.quizMode === 'cloze') {
+      const cloze = buildCloze(card.back)
+      if (cloze) {
+        patch.quizClozeText = cloze.display
+        patch.quizClozeHint = cloze.hint
+        patch.quizCorrectAnswer = cloze.answer
+      }
+      // 无法挖空（如整段无分隔）时 quizClozeText 保持为空，本题退化为拼写题
+    }
+
+    this.setData(patch)
+  },
+
+  /**
+   * 选择题作答
+   */
+  chooseQuizOption(e: WechatMiniprogram.TouchEvent) {
+    if (this.data.quizAnswered) return
+    const option = e.currentTarget.dataset.option as string
+    this.setData({ quizSelectedOption: option })
+    this.applyQuizResult(option === this.data.quizCorrectAnswer)
+  },
+
+  /**
+   * 填空/拼写题输入
+   */
+  onQuizInput(e: WechatMiniprogram.Input) {
+    this.setData({ quizInput: e.detail.value })
+  },
+
+  /**
+   * 提交填空/拼写题作答
+   */
+  submitQuizAnswer() {
+    if (this.data.quizAnswered) return
+    const { quizInput, quizCorrectAnswer } = this.data
+    if (!quizInput.trim()) {
+      wx.showToast({ title: '请先输入答案', icon: 'none' })
+      return
+    }
+    this.applyQuizResult(isAnswerCorrect(quizInput, quizCorrectAnswer))
+  },
+
+  /**
+   * 记录测验结果：答对记「基本掌握」，答错记「疑难」，并同步 SRS 调度
+   */
+  async applyQuizResult(isCorrect: boolean) {
+    this.setData({ quizAnswered: true, quizIsCorrect: isCorrect })
+    await this.updateMastery(isCorrect ? 'learning' : 'difficult')
+    setTimeout(() => {
+      this.advanceQuiz()
+    }, isCorrect ? 800 : 1800)
+  },
+
+  /**
+   * 测验模式下推进到下一题
+   */
+  advanceQuiz() {
+    const nextIndex = this.data.currentCardIndex + 1
+    if (nextIndex >= this.data.sessionCards.length) {
+      this.showStudyComplete()
+      return
+    }
+    this.setData({ currentCardIndex: nextIndex })
+    this.prepareQuestion()
   },
 
   /**
@@ -629,7 +863,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
    * 下一张卡牌
    */
   nextCard() {
-    if (this.data.currentCardIndex < this.data.cards.length - 1 && !this.data.cardAnim) {
+    if (this.data.currentCardIndex < this.data.sessionCards.length - 1 && !this.data.cardAnim) {
       this.setData({ cardAnim: 'anim-next-out' })
       setTimeout(() => {
         this.setData({
@@ -641,7 +875,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
           this.setData({ cardAnim: '' })
         }, 300)
       }, 300)
-    } else if (this.data.currentCardIndex === this.data.cards.length - 1) {
+    } else if (this.data.currentCardIndex === this.data.sessionCards.length - 1) {
       this.showStudyComplete()
     }
   },
@@ -650,11 +884,11 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
    * 显示学习/测验完成提示
    */
   showStudyComplete() {
-    const { isQuiz, cards } = this.data
+    const { isQuiz, sessionCards } = this.data
     const title = isQuiz ? '📝 测验完成' : '🎉 学习完成'
     const content = isQuiz
-      ? `已完成 ${cards.length} 张卡牌的测验！`
-      : `已完成 ${cards.length} 张卡牌的学习！`
+      ? `已完成 ${sessionCards.length} 张卡牌的测验！`
+      : `已完成 ${sessionCards.length} 张卡牌的学习！`
 
     wx.showModal({
       title,
@@ -689,7 +923,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
    * 设置掌握程度
    */
   async setMastery(e: WechatMiniprogram.TouchEvent) {
-    const status = e.currentTarget.dataset.status as CardItem['status']
+    const status = e.currentTarget.dataset.status as MasteryStatus
     await this.updateMastery(status)
   },
 
@@ -697,36 +931,49 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
    * 设置掌握程度并翻到下一张
    */
   async setMasteryAndNext(e: WechatMiniprogram.TouchEvent) {
-    const status = e.currentTarget.dataset.status as CardItem['status']
+    const status = e.currentTarget.dataset.status as MasteryStatus
     await this.updateMastery(status)
+    this.appendRelearnCard(status)
     this.nextCard()
   },
 
   /**
-   * 更新掌握程度（通用方法）
+   * 更新掌握程度：持久化 status/reviewCount，并按 SRS 计算下次复习时间
    */
-  async updateMastery(status: CardItem['status']) {
-    const card = this.data.cards[this.data.currentCardIndex]
-    if (!card || !card._id) return
+  async updateMastery(status: MasteryStatus) {
+    const index = this.data.currentCardIndex
+    const card = this.data.sessionCards[index]
+    if (!card) return
+
+    const nextSrs = applyMastery(card, status, todayKey())
+    const nextReviewCount = (card.reviewCount || 0) + 1
 
     try {
-      await cardCollection.doc(card._id).update({
+      await cardCollection.doc(card.cardId).update({
         data: {
           status: status,
-          reviewCount: (card.reviewCount || 0) + 1
+          reviewCount: nextReviewCount,
+          srs: nextSrs
         }
       })
 
-      const key = `cards[${this.data.currentCardIndex}].status`
-      const reviewKey = `cards[${this.data.currentCardIndex}].reviewCount`
-      this.setData({
-        [key]: status,
-        [reviewKey]: (card.reviewCount || 0) + 1
-      })
+      // 同步会话队列与全量列表中的同一张卡（不可变：整体替换字段）
+      const patch: Record<string, any> = {
+        [`sessionCards[${index}].status`]: status,
+        [`sessionCards[${index}].reviewCount`]: nextReviewCount,
+        [`sessionCards[${index}].srs`]: nextSrs
+      }
+      const listIndex = this.data.cards.findIndex(c => c.cardId === card.cardId)
+      if (listIndex !== -1) {
+        patch[`cards[${listIndex}].status`] = status
+        patch[`cards[${listIndex}].reviewCount`] = nextReviewCount
+        patch[`cards[${listIndex}].srs`] = nextSrs
+      }
+      this.setData(patch)
 
       this.calculateStats()
 
-      console.log('[CardDetail] 更新掌握程度', card.cardId, status)
+      console.log('[CardDetail] 更新掌握程度', card.cardId, status, '下次复习', nextSrs.nextReviewDate)
     } catch (err: any) {
       console.error('[CardDetail] 更新掌握程度失败', err)
       showErrorToast(err)
@@ -859,8 +1106,8 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
         wx.showToast({ title: '未找到该卡片', icon: 'none' })
         return
       }
-      if (card._id) {
-        await cardCollection.doc(card._id).update({
+      if (card.cardId) {
+        await cardCollection.doc(card.cardId).update({
           data: {
             front: front.trim(),
             back: back.trim()
@@ -917,8 +1164,8 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
         wx.showToast({ title: '未找到该卡片', icon: 'none' })
         return
       }
-      if (card._id) {
-        await cardCollection.doc(card._id).remove()
+      if (card.cardId) {
+        await cardCollection.doc(card.cardId).remove()
         
         wx.showToast({
           title: '删除成功',
@@ -949,8 +1196,8 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     try {
       if (isFavorited) {
         const favorite = this.data.favorites.find(f => f.cardId === cardid)
-        if (favorite && favorite._id) {
-          await favoriteCollection.doc(favorite._id).remove()
+        if (favorite && favorite.favoriteId) {
+          await favoriteCollection.doc(favorite.favoriteId).remove()
           // 只有删除成功后，才更新本地状态
           const newFavoriteCardIds = this.data.favoriteCardIds.filter(id => id !== cardid)
           this.setData({
@@ -1088,7 +1335,31 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     }
   },
 
-  shareCardGroup() {
+  /**
+   * 导出卡牌组：选择 JSON 或 CSV 格式
+   */
+  exportCardGroup() {
+    const { cards } = this.data
+    if (cards.length === 0) {
+      wx.showToast({
+        title: '暂无卡牌可导出',
+        icon: 'none'
+      })
+      return
+    }
+    wx.showActionSheet({
+      itemList: ['导出为 JSON 文件', '导出为 CSV 文件'],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          this.exportAsJson()
+        } else {
+          this.exportAsCsv()
+        }
+      }
+    })
+  },
+
+  exportAsJson() {
     const { title, description, cards } = this.data
 
     if (cards.length === 0) {
@@ -1160,33 +1431,89 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     }
   },
 
+  /**
+   * 导出为 CSV 文件（带 BOM，便于 Excel 正确识别 UTF-8）
+   */
+  exportAsCsv() {
+    const { title, cards } = this.data
+    const csv = buildCardsCsv(cards.map(item => ({ front: item.front as string, back: item.back as string })))
+    const fileName = `${title || '卡牌组'}.csv`
+    const fs = wx.getFileSystemManager()
+    const tmpPath = `${wx.env.USER_DATA_PATH}/${fileName}`
+
+    try {
+      fs.writeFileSync(tmpPath, `\uFEFF${csv}`, 'utf8')
+      // @ts-ignore shareFileMessage 类型声明缺失
+      wx.shareFileMessage({
+        filePath: tmpPath,
+        fileName,
+        success: () => {
+          console.log('[CardDetail] 导出 CSV 成功')
+        },
+        fail: (err: WechatMiniprogram.GeneralCallbackResult) => {
+          console.error('[CardDetail] 导出 CSV 失败', err)
+          wx.showToast({ title: '导出失败', icon: 'none' })
+        }
+      })
+    } catch (err: any) {
+      console.error('[CardDetail] 写入 CSV 失败', err)
+      wx.showToast({ title: '导出失败', icon: 'none' })
+    }
+  },
+
   importCards() {
     wx.chooseMessageFile({
       count: 1,
       type: 'file',
       success: (res) => {
         const file = res.tempFiles[0]
-        const fs = wx.getFileSystemManager()
-
-        fs.readFile({
-          filePath: file.path,
-          encoding: 'utf8',
-          success: (readRes) => {
-            this.processImportData(readRes.data as string)
-          },
-          fail: (err) => {
-            console.error('[CardDetail] 读取文件失败', err)
-            wx.showToast({
-              title: '读取文件失败',
-              icon: 'none'
-            })
-          }
-        })
+        this.readImportFile(file.path, file.name)
       },
       fail: (err) => {
         if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
           console.error('[CardDetail] 选择文件失败', err)
         }
+      }
+    })
+  },
+
+  /**
+   * 按扩展名读取导入文件：表格（.xlsx/.xls）走二进制解析，其余按文本解析
+   */
+  readImportFile(filePath: string, fileName: string) {
+    const fs = wx.getFileSystemManager()
+
+    if (isSpreadsheetFile(fileName || filePath)) {
+      fs.readFile({
+        filePath,
+        success: (readRes) => {
+          const cards = parseCardsFromXlsx(readRes.data as ArrayBuffer)
+          if (cards.length === 0) {
+            wx.showToast({ title: '表格中没有可用卡牌', icon: 'none' })
+            return
+          }
+          this.confirmImportCards(cards)
+        },
+        fail: (err) => {
+          console.error('[CardDetail] 读取表格失败', err)
+          wx.showToast({ title: '读取文件失败', icon: 'none' })
+        }
+      })
+      return
+    }
+
+    fs.readFile({
+      filePath,
+      encoding: 'utf8',
+      success: (readRes) => {
+        this.processImportData(readRes.data as string)
+      },
+      fail: (err) => {
+        console.error('[CardDetail] 读取文件失败', err)
+        wx.showToast({
+          title: '读取文件失败',
+          icon: 'none'
+        })
       }
     })
   },
@@ -1205,10 +1532,7 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
           })
           return
         }
-        // 尝试提取 JSON 数组（支持 markdown 代码块包裹）
-        const jsonMatch = data.match(/```(?:json)?\s*([\s\S]*?)```/) || data.match(/\[[\s\S]*?\]/) || data.match(/\{[\s\S]*?\}/)
-        const jsonStr = jsonMatch ? jsonMatch[1] || jsonMatch[0] : data
-        this.processImportData(jsonStr)
+        this.processImportData(data)
       },
       fail: (err) => {
         console.error('[CardDetail] 读取剪贴板失败', err)
@@ -1220,53 +1544,37 @@ Page<CardDetailPageData, WechatMiniprogram.IAnyObject>({
     })
   },
 
+  /**
+   * 处理导入数据：先按 JSON 解析，失败则按 CSV / 分隔符文本解析
+   */
   processImportData(rawData: string) {
-    try {
-      let cardsToImport: { front: string; back: string }[] = []
+    const cardsToImport = parseImportCards(rawData)
 
-      const parsed = JSON.parse(rawData)
-
-      if (Array.isArray(parsed)) {
-        cardsToImport = parsed
-      } else if (parsed.cards && Array.isArray(parsed.cards)) {
-        cardsToImport = parsed.cards
-      } else {
-        wx.showToast({
-          title: '无效的卡牌数据',
-          icon: 'none'
-        })
-        return
-      }
-
-      const validCards = cardsToImport.filter(
-        c => c.front && c.back
-      )
-
-      if (validCards.length === 0) {
-        wx.showToast({
-          title: '没有有效卡牌',
-          icon: 'none'
-        })
-        return
-      }
-
-      wx.showModal({
-        title: '导入卡牌',
-        content: `发现 ${validCards.length} 张卡牌，确认导入到当前卡牌组？`,
-        confirmColor: '#34d399',
-        success: (modalRes) => {
-          if (modalRes.confirm) {
-            this.doImportCards(validCards)
-          }
-        }
-      })
-    } catch (err: any) {
-      console.error('[CardDetail] JSON 解析失败', err)
+    if (cardsToImport.length === 0) {
       wx.showToast({
-        title: '文件格式错误',
+        title: '无法识别文件格式',
         icon: 'none'
       })
+      return
     }
+
+    this.confirmImportCards(cardsToImport)
+  },
+
+  /**
+   * 弹窗确认后导入到当前卡牌组
+   */
+  confirmImportCards(cardsToImport: { front: string; back: string }[]) {
+    wx.showModal({
+      title: '导入卡牌',
+      content: `发现 ${cardsToImport.length} 张卡牌，确认导入到当前卡牌组？`,
+      confirmColor: '#34d399',
+      success: (modalRes) => {
+        if (modalRes.confirm) {
+          this.doImportCards(cardsToImport)
+        }
+      }
+    })
   },
 
   async doImportCards(cardsToImport: { front: string; back: string }[]) {
